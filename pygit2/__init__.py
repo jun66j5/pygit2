@@ -25,6 +25,6 @@
 # the Free Software Foundation, 51 Franklin Street, Fifth Floor,
 # Boston, MA 02110-1301, USA.
 
-from .version import __version__
+from pygit2.version import __version__
 from _pygit2 import *
 import pygit2.utils
