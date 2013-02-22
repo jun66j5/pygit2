@@ -27,13 +27,11 @@
 
 """Tests for Index files."""
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
 import os
 import unittest
 
 import pygit2
-from . import utils
+import utils
 
 
 class IndexBareTest(utils.BareRepoTestCase):
@@ -56,7 +54,7 @@ class IndexTest(utils.RepoTestCase):
         self.assertRaisesWithArg(ValueError, -4, lambda: index[-4])
         self.assertRaisesWithArg(KeyError, 'abc', lambda: index['abc'])
 
-        sha = 'a520c24d85fbfc815d385957eed41406ca5a860b'
+        sha = u'a520c24d85fbfc815d385957eed41406ca5a860b'
         self.assertTrue('hello.txt' in index)
         self.assertEqual(index['hello.txt'].hex, sha)
         self.assertEqual(index['hello.txt'].path, 'hello.txt')
@@ -65,7 +63,7 @@ class IndexTest(utils.RepoTestCase):
     def test_add(self):
         index = self.repo.index
 
-        sha = '0907563af06c7464d62a70cdd135a6ba7d2b41d8'
+        sha = u'0907563af06c7464d62a70cdd135a6ba7d2b41d8'
         self.assertFalse('bye.txt' in index)
         index.add('bye.txt')
         self.assertTrue('bye.txt' in index)
@@ -90,7 +88,7 @@ class IndexTest(utils.RepoTestCase):
 
 
     def test_read_tree(self):
-        tree_oid = '68aba62e560c0ebc3396e8ae9335232cd93a3f60'
+        tree_oid = u'68aba62e560c0ebc3396e8ae9335232cd93a3f60'
         # Test reading first tree
         index = self.repo.index
         self.assertEqual(len(index), 2)
@@ -108,7 +106,7 @@ class IndexTest(utils.RepoTestCase):
     def test_write_tree(self):
         oid = self.repo.index.write_tree()
         sha = utils.oid_to_hex(oid)
-        self.assertEqual(sha, 'fd937514cb799514d4b81bb24c5fcfeb6472b245')
+        self.assertEqual(sha, u'fd937514cb799514d4b81bb24c5fcfeb6472b245')
 
     def test_iter(self):
         index = self.repo.index

@@ -27,14 +27,12 @@
 
 """Tests for Index files."""
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
 import unittest
 
-from . import utils
+import utils
 
 
-TREE_SHA = '967fce8df97cc71722d3c2a5930ef3e6f1d27b12'
+TREE_SHA = u'967fce8df97cc71722d3c2a5930ef3e6f1d27b12'
 
 class TreeBuilderTest(utils.BareRepoTestCase):
 

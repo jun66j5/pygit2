@@ -31,7 +31,7 @@ import os
 import unittest
 
 import pygit2
-from . import utils
+import utils
 
 
 config_filename = "test_config"
