@@ -262,7 +262,11 @@ Repository_read(Repository *self, PyObject *py_hex)
         return NULL;
 
     tuple = Py_BuildValue(
+#if PY_VERSION_HEX < 0x02050000
+        "(is#)",
+#else
         "(ns#)",
+#endif
         git_odb_object_type(obj),
         git_odb_object_data(obj),
         git_odb_object_size(obj));
