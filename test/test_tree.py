@@ -27,17 +27,15 @@
 
 """Tests for Commit objects."""
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
 import operator
 import unittest
 
 import pygit2
-from . import utils
+import utils
 
 
-TREE_SHA = '967fce8df97cc71722d3c2a5930ef3e6f1d27b12'
-SUBTREE_SHA = '614fd9a3094bf618ea938fffc00e7d1a54f89ad0'
+TREE_SHA = u'967fce8df97cc71722d3c2a5930ef3e6f1d27b12'
+SUBTREE_SHA = u'614fd9a3094bf618ea938fffc00e7d1a54f89ad0'
 
 
 class TreeTest(utils.BareRepoTestCase):
@@ -56,34 +54,34 @@ class TreeTest(utils.BareRepoTestCase):
         self.assertRaisesWithArg(IndexError, 3, lambda: tree[3])
 
         self.assertEqual(3, len(tree))
-        sha = '7f129fd57e31e935c6d60a0c794efe4e6927664b'
+        sha = u'7f129fd57e31e935c6d60a0c794efe4e6927664b'
         self.assertTrue('a' in tree)
-        self.assertTreeEntryEqual(tree[0], sha, 'a', 0o0100644)
-        self.assertTreeEntryEqual(tree[-3], sha, 'a', 0o0100644)
-        self.assertTreeEntryEqual(tree['a'], sha, 'a', 0o0100644)
+        self.assertTreeEntryEqual(tree[0], sha, 'a', 0100644)
+        self.assertTreeEntryEqual(tree[-3], sha, 'a', 0100644)
+        self.assertTreeEntryEqual(tree['a'], sha, 'a', 0100644)
 
-        sha = '85f120ee4dac60d0719fd51731e4199aa5a37df6'
+        sha = u'85f120ee4dac60d0719fd51731e4199aa5a37df6'
         self.assertTrue('b' in tree)
-        self.assertTreeEntryEqual(tree[1], sha, 'b', 0o0100644)
-        self.assertTreeEntryEqual(tree[-2], sha, 'b', 0o0100644)
-        self.assertTreeEntryEqual(tree['b'], sha, 'b', 0o0100644)
+        self.assertTreeEntryEqual(tree[1], sha, 'b', 0100644)
+        self.assertTreeEntryEqual(tree[-2], sha, 'b', 0100644)
+        self.assertTreeEntryEqual(tree['b'], sha, 'b', 0100644)
 
     def test_read_subtree(self):
         tree = self.repo[TREE_SHA]
         subtree_entry = tree['c']
-        self.assertTreeEntryEqual(subtree_entry, SUBTREE_SHA, 'c', 0o0040000)
+        self.assertTreeEntryEqual(subtree_entry, SUBTREE_SHA, 'c', 0040000)
 
         subtree = subtree_entry.to_object()
         self.assertEqual(1, len(subtree))
-        sha = '297efb891a47de80be0cfe9c639e4b8c9b450989'
-        self.assertTreeEntryEqual(subtree[0], sha, 'd', 0o0100644)
+        sha = u'297efb891a47de80be0cfe9c639e4b8c9b450989'
+        self.assertTreeEntryEqual(subtree[0], sha, 'd', 0100644)
 
     # TODO This test worked with libgit2 v0.10.0, update to use the
     # tree-builder
     def xtest_new_tree(self):
         b = self.repo.TreeBuilder()
-        b.insert('1' * 40, 'x', 0o0100644)
-        b.insert('2' * 40, 'y', 0o0100755)
+        b.insert('1' * 40, 'x', 0100644)
+        b.insert('2' * 40, 'y', 0100755)
         tree = self.repo[b.write()]
 
         self.assertTrue('x' in tree)

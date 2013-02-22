@@ -27,18 +27,16 @@
 
 """Tests for Diff objects."""
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
 import unittest
 
-from . import utils
+import utils
 
 
-COMMIT_SHA1_1 = '5fe808e8953c12735680c257f56600cb0de44b10'
-COMMIT_SHA1_2 = 'c2792cfa289ae6321ecf2cd5806c2194b0fd070c'
-COMMIT_SHA1_3 = '2cdae28389c059815e951d0bb9eed6533f61a46b'
+COMMIT_SHA1_1 = u'5fe808e8953c12735680c257f56600cb0de44b10'
+COMMIT_SHA1_2 = u'c2792cfa289ae6321ecf2cd5806c2194b0fd070c'
+COMMIT_SHA1_3 = u'2cdae28389c059815e951d0bb9eed6533f61a46b'
 
-PATCH = b"""diff --git a/a b/a
+PATCH = """diff --git a/a b/a
 index 7f129fd..af431f2 100644
 --- a/a
 +++ b/a
@@ -185,8 +183,8 @@ class DiffTest(utils.BareRepoTestCase):
         commit_a = self.repo[COMMIT_SHA1_1]
         commit_b = self.repo[COMMIT_SHA1_2]
         diff = commit_a.tree.diff(commit_b.tree)
-        self.assertEqual(diff.changes['hunks'][0].old_oid, '7f129fd57e31e935c6d60a0c794efe4e6927664b')
-        self.assertEqual(diff.changes['hunks'][0].new_oid, 'af431f20fc541ed6d5afede3e2dc7160f6f01f16')
+        self.assertEqual(diff.changes['hunks'][0].old_oid, u'7f129fd57e31e935c6d60a0c794efe4e6927664b')
+        self.assertEqual(diff.changes['hunks'][0].new_oid, u'af431f20fc541ed6d5afede3e2dc7160f6f01f16')
 
 if __name__ == '__main__':
     unittest.main()

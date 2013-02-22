@@ -27,23 +27,21 @@
 
 """Tests for Blob objects."""
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
 import unittest
 import tempfile
 import os
 
 import pygit2
-from . import utils
+import utils
 
 
-BLOB_SHA = 'a520c24d85fbfc815d385957eed41406ca5a860b'
+BLOB_SHA = u'a520c24d85fbfc815d385957eed41406ca5a860b'
 BLOB_CONTENT = """hello world
 hola mundo
 bonjour le monde
 """.encode()
-BLOB_NEW_CONTENT = b'foo bar\n'
-BLOB_FILE_CONTENT = b'bye world\n'
+BLOB_NEW_CONTENT = 'foo bar\n'
+BLOB_FILE_CONTENT = 'bye world\n'
 
 
 class BlobTest(utils.RepoTestCase):
