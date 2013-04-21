@@ -35,7 +35,26 @@ import stat
 import tarfile
 import tempfile
 import unittest
-import hashlib
+try:
+    from hashlib import sha1
+except ImportError:
+    from sha import new as sha1
+try:
+    all = all
+except:
+    def all(iterable):
+        for element in iterable:
+            if not element:
+                return False
+        return True
+try:
+    any = any
+except:
+    def any(iterable):
+        for element in iterable:
+            if element:
+                return True
+        return False
 
 import pygit2
 
@@ -52,7 +71,7 @@ def oid_to_hex(oid):
 
 def gen_blob_sha1(data):
     # http://stackoverflow.com/questions/552659/assigning-git-sha1s-without-git
-    m = hashlib.sha1()
+    m = sha1()
     m.update(('blob %d\0' % len(data)).encode())
     m.update(data)
 
@@ -92,7 +111,7 @@ class NoRepoTestCase(unittest.TestCase):
     def assertRaisesWithArg(self, exc_class, arg, func, *args, **kwargs):
         try:
             func(*args, **kwargs)
-        except exc_class as exc_value:
+        except exc_class, exc_value:
             self.assertEqual((arg,), exc_value.args)
         else:
             self.fail('%s(%r) not raised' % (exc_class.__name__, arg))

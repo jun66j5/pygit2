@@ -36,7 +36,10 @@ class Repository(_Repository):
     #
     def get(self, key, default=None):
         value = self.git_object_lookup_prefix(key)
-        return value if (value is not None) else default
+        if value is None:
+            return default
+        else:
+            return value
 
 
     def __getitem__(self, key):

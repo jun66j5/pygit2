@@ -27,10 +27,6 @@
 
 """Tests for Repository objects."""
 
-# Import from the future
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 # Import from the Standard Library
 import binascii
 import unittest
@@ -42,12 +38,12 @@ from os.path import join, realpath
 from pygit2 import GIT_OBJ_ANY, GIT_OBJ_BLOB, GIT_OBJ_COMMIT
 from pygit2 import init_repository, discover_repository, Reference, hashfile
 import pygit2
-from . import utils
+import utils
 
 
-HEAD_SHA = '784855caf26449a1914d2cf62d12b9374d76ae78'
-PARENT_SHA = 'f5e5aa4e36ab0fe62ee1ccc6eb8f79b866863b87'  # HEAD^
-A_HEX_SHA = 'af431f20fc541ed6d5afede3e2dc7160f6f01f16'
+HEAD_SHA = u'784855caf26449a1914d2cf62d12b9374d76ae78'
+PARENT_SHA = u'f5e5aa4e36ab0fe62ee1ccc6eb8f79b866863b87'  # HEAD^
+A_HEX_SHA = u'af431f20fc541ed6d5afede3e2dc7160f6f01f16'
 A_BIN_SHA = binascii.unhexlify(A_HEX_SHA.encode('ascii'))
 
 
@@ -68,27 +64,27 @@ class RepositoryTest(utils.BareRepoTestCase):
 
     def test_read(self):
         self.assertRaises(TypeError, self.repo.read, 123)
-        self.assertRaisesWithArg(KeyError, '1' * 40, self.repo.read, '1' * 40)
+        self.assertRaisesWithArg(KeyError, '1' * 40, self.repo.read, u'1' * 40)
 
         ab = self.repo.read(A_BIN_SHA)
         a = self.repo.read(A_HEX_SHA)
         self.assertEqual(ab, a)
-        self.assertEqual((GIT_OBJ_BLOB, b'a contents\n'), a)
+        self.assertEqual((GIT_OBJ_BLOB, 'a contents\n'), a)
 
-        a2 = self.repo.read('7f129fd57e31e935c6d60a0c794efe4e6927664b')
-        self.assertEqual((GIT_OBJ_BLOB, b'a contents 2\n'), a2)
+        a2 = self.repo.read(u'7f129fd57e31e935c6d60a0c794efe4e6927664b')
+        self.assertEqual((GIT_OBJ_BLOB, 'a contents 2\n'), a2)
 
         a_hex_prefix = A_HEX_SHA[:4]
         a3 = self.repo.read(a_hex_prefix)
-        self.assertEqual((GIT_OBJ_BLOB, b'a contents\n'), a3)
+        self.assertEqual((GIT_OBJ_BLOB, 'a contents\n'), a3)
 
     def test_write(self):
-        data = b"hello world"
+        data = "hello world"
         # invalid object type
         self.assertRaises(ValueError, self.repo.write, GIT_OBJ_ANY, data)
 
         oid = self.repo.write(GIT_OBJ_BLOB, data)
-        self.assertEqual(type(oid), bytes)
+        self.assertEqual(type(oid), str)
         self.assertEqual(len(oid), 20)
 
     def test_contains(self):
@@ -97,7 +93,7 @@ class RepositoryTest(utils.BareRepoTestCase):
         self.assertTrue(A_BIN_SHA[:10] in self.repo)
         self.assertTrue(A_HEX_SHA in self.repo)
         self.assertTrue(A_HEX_SHA[:10] in self.repo)
-        self.assertFalse('a' * 40 in self.repo)
+        self.assertFalse(u'a' * 40 in self.repo)
         self.assertFalse('a' * 20 in self.repo)
 
     def test_iterable(self):
@@ -108,18 +104,18 @@ class RepositoryTest(utils.BareRepoTestCase):
         self.assertRaises(TypeError, lambda: self.repo[123])
         self.assertEqual(self.repo[A_BIN_SHA].hex, A_HEX_SHA)
         a = self.repo[A_HEX_SHA]
-        self.assertEqual(b'a contents\n', a.read_raw())
+        self.assertEqual('a contents\n', a.read_raw())
         self.assertEqual(A_HEX_SHA, a.hex)
         self.assertEqual(GIT_OBJ_BLOB, a.type)
 
     def test_lookup_blob_prefix(self):
         a = self.repo[A_HEX_SHA[:5]]
-        self.assertEqual(b'a contents\n', a.read_raw())
+        self.assertEqual('a contents\n', a.read_raw())
         self.assertEqual(A_HEX_SHA, a.hex)
         self.assertEqual(GIT_OBJ_BLOB, a.type)
 
     def test_lookup_commit(self):
-        commit_sha = '5fe808e8953c12735680c257f56600cb0de44b10'
+        commit_sha = u'5fe808e8953c12735680c257f56600cb0de44b10'
         commit = self.repo[commit_sha]
         self.assertEqual(commit_sha, commit.hex)
         self.assertEqual(GIT_OBJ_COMMIT, commit.type)
@@ -128,7 +124,7 @@ class RepositoryTest(utils.BareRepoTestCase):
                          commit.message)
 
     def test_lookup_commit_prefix(self):
-        commit_sha = '5fe808e8953c12735680c257f56600cb0de44b10'
+        commit_sha = u'5fe808e8953c12735680c257f56600cb0de44b10'
         commit_sha_prefix = commit_sha[:7]
         too_short_prefix = commit_sha[:3]
         commit = self.repo[commit_sha_prefix]
@@ -160,8 +156,11 @@ class RepositoryTest(utils.BareRepoTestCase):
     def test_hashfile(self):
         data = "bazbarfoo"
         tempfile_path = tempfile.mkstemp()[1]
-        with open(tempfile_path, 'w') as fh:
+        fh = open(tempfile_path, 'w')
+        try:
             fh.write(data)
+        finally:
+            fh.close()
         hashed_sha1 = hashfile(tempfile_path)
         written_sha1 = self.repo.create_blob(data)
         self.assertEqual(hashed_sha1, written_sha1)
@@ -207,8 +206,11 @@ class RepositoryTest_II(utils.RepoTestCase):
 
     def test_checkout_index(self):
         # some changes to working dir
-        with open(os.path.join(self.repo.workdir, 'hello.txt'), 'w') as f:
-          f.write('new content')
+        f = open(os.path.join(self.repo.workdir, 'hello.txt'), 'w')
+        try:
+            f.write('new content')
+        finally:
+            f.close()
 
         # checkout index
         self.assertTrue('hello.txt' in self.repo.status())
@@ -217,8 +219,11 @@ class RepositoryTest_II(utils.RepoTestCase):
 
     def test_checkout_head(self):
         # some changes to the index
-        with open(os.path.join(self.repo.workdir, 'bye.txt'), 'w') as f:
-          f.write('new content')
+        f = open(os.path.join(self.repo.workdir, 'bye.txt'), 'w')
+        try:
+            f.write('new content')
+        finally:
+            f.close()
         self.repo.index.add('bye.txt')
 
         # checkout from index should not change anything
@@ -235,7 +240,7 @@ class NewRepositoryTest(utils.NoRepoTestCase):
         repo = init_repository(self._temp_dir, False)
 
         oid = repo.write(GIT_OBJ_BLOB, "Test")
-        self.assertEqual(type(oid), bytes)
+        self.assertEqual(type(oid), str)
         self.assertEqual(len(oid), 20)
 
         assert os.path.exists(os.path.join(self._temp_dir, '.git'))

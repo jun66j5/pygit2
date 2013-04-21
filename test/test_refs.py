@@ -27,15 +27,13 @@
 
 """Tests for reference objects."""
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
 import unittest
 
 from pygit2 import GitError, GIT_REF_OID, GIT_REF_SYMBOLIC
-from . import utils
+import utils
 
 
-LAST_COMMIT = '2be5719152d4f82c7302b1c0932d8e5f0a4a0e98'
+LAST_COMMIT = u'2be5719152d4f82c7302b1c0932d8e5f0a4a0e98'
 
 
 
@@ -80,13 +78,13 @@ class ReferencesTest(utils.RepoTestCase):
 
 
     def test_reference_set_sha(self):
-        NEW_COMMIT = '5ebeeebb320790caf276b9fc8b24546d63316533'
+        NEW_COMMIT = u'5ebeeebb320790caf276b9fc8b24546d63316533'
         reference = self.repo.lookup_reference('refs/heads/master')
         reference.oid = NEW_COMMIT
         self.assertEqual(reference.hex, NEW_COMMIT)
 
     def test_reference_set_sha_prefix(self):
-        NEW_COMMIT = '5ebeeebb320790caf276b9fc8b24546d63316533'
+        NEW_COMMIT = u'5ebeeebb320790caf276b9fc8b24546d63316533'
         reference = self.repo.lookup_reference('refs/heads/master')
         reference.oid = NEW_COMMIT[0:6]
         self.assertEqual(reference.hex, NEW_COMMIT)
