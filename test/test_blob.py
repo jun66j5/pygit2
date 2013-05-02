@@ -34,7 +34,7 @@ import pygit2
 import utils
 
 
-BLOB_SHA = u'a520c24d85fbfc815d385957eed41406ca5a860b'
+BLOB_SHA = 'a520c24d85fbfc815d385957eed41406ca5a860b'
 BLOB_CONTENT = """hello world
 hola mundo
 bonjour le monde

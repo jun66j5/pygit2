@@ -66,14 +66,14 @@ class RepositoryTest(utils.BareRepoTestCase):
 
     def test_read(self):
         self.assertRaises(TypeError, self.repo.read, 123)
-        self.assertRaisesWithArg(KeyError, '1' * 40, self.repo.read, u'1' * 40)
+        self.assertRaisesWithArg(KeyError, '1' * 40, self.repo.read, '1' * 40)
 
         ab = self.repo.read(BLOB_OID)
         a = self.repo.read(BLOB_HEX)
         self.assertEqual(ab, a)
         self.assertEqual((GIT_OBJ_BLOB, 'a contents\n'), a)
 
-        a2 = self.repo.read(u'7f129fd57e31e935c6d60a0c794efe4e6927664b')
+        a2 = self.repo.read('7f129fd57e31e935c6d60a0c794efe4e6927664b')
         self.assertEqual((GIT_OBJ_BLOB, 'a contents 2\n'), a2)
 
         a_hex_prefix = BLOB_HEX[:4]
@@ -116,7 +116,7 @@ class RepositoryTest(utils.BareRepoTestCase):
         self.assertEqual(GIT_OBJ_BLOB, a.type)
 
     def test_lookup_commit(self):
-        commit_sha = u'5fe808e8953c12735680c257f56600cb0de44b10'
+        commit_sha = '5fe808e8953c12735680c257f56600cb0de44b10'
         commit = self.repo[commit_sha]
         self.assertEqual(commit_sha, commit.hex)
         self.assertEqual(GIT_OBJ_COMMIT, commit.type)
@@ -125,7 +125,7 @@ class RepositoryTest(utils.BareRepoTestCase):
                          commit.message)
 
     def test_lookup_commit_prefix(self):
-        commit_sha = u'5fe808e8953c12735680c257f56600cb0de44b10'
+        commit_sha = '5fe808e8953c12735680c257f56600cb0de44b10'
         commit_sha_prefix = commit_sha[:7]
         too_short_prefix = commit_sha[:3]
         commit = self.repo[commit_sha_prefix]
