@@ -25,5 +25,13 @@
 # the Free Software Foundation, 51 Franklin Street, Fifth Floor,
 # Boston, MA 02110-1301, USA.
 
+try:
+    all = all
+except NameError:
+    def all(iterable):
+        for element in iterable:
+            if not element:
+                return False
+        return True
 
 # feel free to add utils functions here

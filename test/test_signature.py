@@ -25,13 +25,11 @@
 # the Free Software Foundation, 51 Franklin Street, Fifth Floor,
 # Boston, MA 02110-1301, USA.
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
 import unittest
 import time
 
 from pygit2 import Signature
-from .utils import NoRepoTestCase
+from utils import NoRepoTestCase
 
 
 class SignatureTest(NoRepoTestCase):
@@ -46,7 +44,7 @@ class SignatureTest(NoRepoTestCase):
 
     def test_ascii(self):
         self.assertRaises(UnicodeEncodeError,
-                          Signature, 'Foo Ibáñez', 'foo@example.com')
+                          Signature, u'Foo Ibáñez', 'foo@example.com')
 
     def test_latin1(self):
         encoding = 'iso-8859-1'

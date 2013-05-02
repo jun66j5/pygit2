@@ -71,6 +71,58 @@
         return -1;\
     }
 
+#ifndef Py_LOCAL_INLINE
+  #define Py_LOCAL_INLINE(type) static inline type
+#endif
+
+#ifndef Py_TYPE
+  #define Py_TYPE(ob) (((PyObject*)(ob))->ob_type)
+#endif
+
+#ifndef PyVarObject_HEAD_INIT
+  #define PyVarObject_HEAD_INIT(type, size) PyObject_HEAD_INIT(type) size,
+#endif
+
+#if PY_VERSION_HEX < 0x02050000
+Py_LOCAL_INLINE(PyObject*)
+PyInt_FromSize_t(size_t ival)
+{
+    if (ival <= LONG_MAX)
+        return PyInt_FromLong((long) ival);
+    else
+        return PyLong_FromLongLong((PY_LONG_LONG) ival);
+}
+#endif
+
+#if PY_VERSION_HEX < 0x02050000 && !defined(PY_SSIZE_T_MIN)
+  typedef int Py_ssize_t;
+  typedef Py_ssize_t (*lenfunc)(PyObject *);
+  #define PY_SSIZE_T_MAX INT_MAX
+  #define PY_SSIZE_T_MIN INT_MIN
+#endif
+
+#if PY_VERSION_HEX < 0x02050000 && !defined(PyBytes_ConcatAndDel)
+  #define PyBytes_ConcatAndDel PyString_ConcatAndDel
+#endif
+
+#if PY_VERSION_HEX < 0x02060000
+Py_LOCAL_INLINE(PyObject*)
+PyUnicode_FromString(const char *u)
+{
+    return PyUnicode_Decode(u, strlen(u), "utf-8", "strict");
+}
+
+Py_LOCAL_INLINE(PyObject*)
+PyUnicode_FromStringAndSize(const char *u, Py_ssize_t size)
+{
+    return PyUnicode_Decode(u, size, "utf-8", "strict");
+}
+#endif
+
+#if PY_MAJOR_VERSION == 2
+  #define PyBytes_FromString PyString_FromString
+  #define PyBytes_FromStringAndSize PyString_FromStringAndSize
+#endif
 
 /* Utilities */
 #define to_unicode(x, encoding, errors) to_unicode_n(x, strlen(x), encoding, errors)

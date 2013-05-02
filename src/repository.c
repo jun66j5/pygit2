@@ -344,7 +344,9 @@ Repository_read(Repository *self, PyObject *py_hex)
         return NULL;
 
     tuple = Py_BuildValue(
-    #if PY_MAJOR_VERSION == 2
+    #if PY_VERSION_HEX < 0x02050000
+        "(is#)",
+    #elif PY_MAJOR_VERSION == 2
         "(ns#)",
     #else
         "(ny#)",

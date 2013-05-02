@@ -27,15 +27,13 @@
 
 """Tests for Commit objects."""
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
 import unittest
 
 from pygit2 import GIT_OBJ_COMMIT, Signature
-from . import utils
+import utils
 
 
-COMMIT_SHA = '5fe808e8953c12735680c257f56600cb0de44b10'
+COMMIT_SHA = u'5fe808e8953c12735680c257f56600cb0de44b10'
 
 
 class CommitTest(utils.BareRepoTestCase):
@@ -45,33 +43,33 @@ class CommitTest(utils.BareRepoTestCase):
         self.assertEqual(COMMIT_SHA, commit.hex)
         parents = commit.parents
         self.assertEqual(1, len(parents))
-        self.assertEqual('c2792cfa289ae6321ecf2cd5806c2194b0fd070c',
+        self.assertEqual(u'c2792cfa289ae6321ecf2cd5806c2194b0fd070c',
                          parents[0].hex)
         self.assertEqual(None, commit.message_encoding)
-        self.assertEqual(('Second test data commit.\n\n'
-                          'This commit has some additional text.\n'),
+        self.assertEqual((u'Second test data commit.\n\n'
+                          u'This commit has some additional text.\n'),
                          commit.message)
         commit_time = 1288481576
         self.assertEqual(commit_time, commit.commit_time)
         self.assertEqualSignature(
             commit.committer,
-            Signature('Dave Borowitz', 'dborowitz@google.com',
+            Signature(u'Dave Borowitz', u'dborowitz@google.com',
                       commit_time, -420))
         self.assertEqualSignature(
             commit.author,
-            Signature('Dave Borowitz', 'dborowitz@google.com', 1288477363,
+            Signature(u'Dave Borowitz', u'dborowitz@google.com', 1288477363,
                       -420))
         self.assertEqual(
-            '967fce8df97cc71722d3c2a5930ef3e6f1d27b12', commit.tree.hex)
+            u'967fce8df97cc71722d3c2a5930ef3e6f1d27b12', commit.tree.hex)
 
     def test_new_commit(self):
         repo = self.repo
-        message = 'New commit.\n\nMessage with non-ascii chars: ééé.\n'
-        committer = Signature('John Doe', 'jdoe@example.com', 12346, 0)
+        message = u'New commit.\n\nMessage with non-ascii chars: ééé.\n'
+        committer = Signature(u'John Doe', u'jdoe@example.com', 12346, 0)
         author = Signature(
-            'J. David Ibáñez', 'jdavid@example.com', 12345, 0,
+            u'J. David Ibáñez', u'jdavid@example.com', 12345, 0,
             encoding='utf-8')
-        tree = '967fce8df97cc71722d3c2a5930ef3e6f1d27b12'
+        tree = u'967fce8df97cc71722d3c2a5930ef3e6f1d27b12'
         tree_prefix = tree[:5]
         too_short_prefix = tree[:3]
 
@@ -84,7 +82,7 @@ class CommitTest(utils.BareRepoTestCase):
         commit = repo[sha]
 
         self.assertEqual(GIT_OBJ_COMMIT, commit.type)
-        self.assertEqual('98286caaab3f1fde5bf52c8369b2b0423bad743b',
+        self.assertEqual(u'98286caaab3f1fde5bf52c8369b2b0423bad743b',
                          commit.hex)
         self.assertEqual(None, commit.message_encoding)
         self.assertEqual(message, commit.message)
@@ -98,12 +96,12 @@ class CommitTest(utils.BareRepoTestCase):
     def test_new_commit_encoding(self):
         repo = self.repo
         encoding = 'iso-8859-1'
-        message = 'New commit.\n\nMessage with non-ascii chars: ééé.\n'
-        committer = Signature('John Doe', 'jdoe@example.com', 12346, 0,
+        message = u'New commit.\n\nMessage with non-ascii chars: ééé.\n'
+        committer = Signature(u'John Doe', u'jdoe@example.com', 12346, 0,
                               encoding)
-        author = Signature('J. David Ibáñez', 'jdavid@example.com', 12345, 0,
+        author = Signature(u'J. David Ibáñez', u'jdavid@example.com', 12345, 0,
                            encoding)
-        tree = '967fce8df97cc71722d3c2a5930ef3e6f1d27b12'
+        tree = u'967fce8df97cc71722d3c2a5930ef3e6f1d27b12'
         tree_prefix = tree[:5]
 
         parents = [COMMIT_SHA[:5]]
@@ -122,17 +120,19 @@ class CommitTest(utils.BareRepoTestCase):
         self.assertEqual(COMMIT_SHA, commit.parents[0].hex)
 
     def test_modify_commit(self):
-        message = 'New commit.\n\nMessage.\n'
-        committer = ('John Doe', 'jdoe@example.com', 12346)
-        author = ('Jane Doe', 'jdoe2@example.com', 12345)
+        message = u'New commit.\n\nMessage.\n'
+        committer = (u'John Doe', u'jdoe@example.com', 12346)
+        author = (u'Jane Doe', u'jdoe2@example.com', 12345)
+
+        import sys
+        exctype = (AttributeError, TypeError)[sys.version_info[:2] < (2, 5)]
 
         commit = self.repo[COMMIT_SHA]
-        self.assertRaises(AttributeError, setattr, commit, 'message', message)
-        self.assertRaises(AttributeError, setattr, commit, 'committer',
-                          committer)
-        self.assertRaises(AttributeError, setattr, commit, 'author', author)
-        self.assertRaises(AttributeError, setattr, commit, 'tree', None)
-        self.assertRaises(AttributeError, setattr, commit, 'parents', None)
+        self.assertRaises(exctype, setattr, commit, 'message', message)
+        self.assertRaises(exctype, setattr, commit, 'committer', committer)
+        self.assertRaises(exctype, setattr, commit, 'author', author)
+        self.assertRaises(exctype, setattr, commit, 'tree', None)
+        self.assertRaises(exctype, setattr, commit, 'parents', None)
 
 
 if __name__ == '__main__':

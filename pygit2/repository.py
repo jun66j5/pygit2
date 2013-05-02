@@ -31,6 +31,7 @@ from string import hexdigits
 # Import from pygit2
 from _pygit2 import Repository as _Repository
 from _pygit2 import Oid, GIT_OID_HEXSZ, GIT_OID_MINPREFIXLEN
+from pygit2.utils import all
 
 
 class Repository(_Repository):
@@ -40,7 +41,10 @@ class Repository(_Repository):
     #
     def get(self, key, default=None):
         value = self.git_object_lookup_prefix(key)
-        return value if (value is not None) else default
+        if value is None:
+            return default
+        else:
+            return value
 
 
     def __getitem__(self, key):

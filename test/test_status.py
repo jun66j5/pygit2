@@ -27,12 +27,10 @@
 
 """Tests for revision walk."""
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
 import unittest
 
 import pygit2
-from . import utils
+import utils
 
 
 EXPECTED = {

@@ -27,10 +27,6 @@
 
 """Tests for Object ids."""
 
-# Import from the future
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 # Import from the Standard Library
 from binascii import unhexlify
 from sys import version_info
@@ -38,7 +34,7 @@ import unittest
 
 # Import from pygit2
 from pygit2 import Oid
-from . import utils
+import utils
 
 
 HEX = "15b648aec6ed045b5ca6f57f8b7831a8b4757298"
@@ -58,12 +54,12 @@ class OidTest(utils.BareRepoTestCase):
 
     def test_hex_bytes(self):
         if version_info[0] == 2:
-            hex = bytes(HEX)
+            hex = utils.bytes(HEX)
             oid = Oid(hex=hex)
             self.assertEqual(oid.raw, RAW)
             self.assertEqual(oid.hex, HEX)
         else:
-            hex = bytes(HEX, "ascii")
+            hex = utils.bytes(HEX, "ascii")
             self.assertRaises(TypeError, Oid, hex=hex)
 
     def test_none(self):
@@ -73,7 +69,7 @@ class OidTest(utils.BareRepoTestCase):
         self.assertRaises(ValueError, Oid, raw=RAW, hex=HEX)
 
     def test_long(self):
-        self.assertRaises(ValueError, Oid, raw=RAW + b'a')
+        self.assertRaises(ValueError, Oid, raw=RAW + 'a')
         self.assertRaises(ValueError, Oid, hex=HEX + 'a')
 
     def test_cmp(self):

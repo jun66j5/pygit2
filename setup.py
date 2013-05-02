@@ -28,8 +28,6 @@
 
 """Setup file for pygit2."""
 
-from __future__ import print_function
-
 import codecs
 import os
 from subprocess import Popen, PIPE
@@ -170,8 +168,11 @@ classifiers = [
     "Topic :: Software Development :: Version Control"]
 
 
-with codecs.open('README.rst', 'r', 'utf-8') as readme:
+readme = codecs.open('README.rst', 'r', 'utf-8')
+try:
     long_description = readme.read()
+finally:
+    readme.close()
 
 setup(name='pygit2',
       description='Python bindings for libgit2.',

@@ -27,33 +27,31 @@
 
 """Tests for revision walk."""
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
 import unittest
 
 from pygit2 import GIT_SORT_TIME, GIT_SORT_REVERSE
-from . import utils
+import utils
 
 
 # In the order given by git log
 log = [
-    '2be5719152d4f82c7302b1c0932d8e5f0a4a0e98',
-    '5ebeeebb320790caf276b9fc8b24546d63316533',
-    '4ec4389a8068641da2d6578db0419484972284c8',
-    '6aaa262e655dd54252e5813c8e5acd7780ed097d',
-    'acecd5ea2924a4b900e7e149496e1f4b57976e51']
+    u'2be5719152d4f82c7302b1c0932d8e5f0a4a0e98',
+    u'5ebeeebb320790caf276b9fc8b24546d63316533',
+    u'4ec4389a8068641da2d6578db0419484972284c8',
+    u'6aaa262e655dd54252e5813c8e5acd7780ed097d',
+    u'acecd5ea2924a4b900e7e149496e1f4b57976e51']
 
 REVLOGS = [
-    ('Nico von Geyso', 'checkout: moving from i18n to master'),
-    ('Nico von Geyso', 'commit: added bye.txt and new'),
-    ('Nico von Geyso', 'checkout: moving from master to i18n'),
-    ('J. David Ibañez', 'merge i18n: Merge made by recursive.'),
-    ('J. David Ibañez', 'commit: Add .gitignore file'),
-    ('J. David Ibañez', 'checkout: moving from i18n to master'),
-    ('J. David Ibañez', 'commit: Say hello in French'),
-    ('J. David Ibañez', 'commit: Say hello in Spanish'),
-    ('J. David Ibañez', 'checkout: moving from master to i18n'),
-    ('J. David Ibañez', 'commit (initial): First commit')
+    (u'Nico von Geyso', u'checkout: moving from i18n to master'),
+    (u'Nico von Geyso', u'commit: added bye.txt and new'),
+    (u'Nico von Geyso', u'checkout: moving from master to i18n'),
+    (u'J. David Ibañez', u'merge i18n: Merge made by recursive.'),
+    (u'J. David Ibañez', u'commit: Add .gitignore file'),
+    (u'J. David Ibañez', u'checkout: moving from i18n to master'),
+    (u'J. David Ibañez', u'commit: Say hello in French'),
+    (u'J. David Ibañez', u'commit: Say hello in Spanish'),
+    (u'J. David Ibañez', u'checkout: moving from master to i18n'),
+    (u'J. David Ibañez', u'commit (initial): First commit')
 ]
 
 
@@ -79,12 +77,12 @@ class WalkerTest(utils.RepoTestCase):
 
     def test_hide(self):
         walker = self.repo.walk(log[0], GIT_SORT_TIME)
-        walker.hide('4ec4389a8068641da2d6578db0419484972284c8')
+        walker.hide(u'4ec4389a8068641da2d6578db0419484972284c8')
         self.assertEqual(len(list(walker)), 2)
 
     def test_hide_prefix(self):
         walker = self.repo.walk(log[0], GIT_SORT_TIME)
-        walker.hide('4ec4389a')
+        walker.hide(u'4ec4389a')
         self.assertEqual(len(list(walker)), 2)
 
     def test_reset(self):
