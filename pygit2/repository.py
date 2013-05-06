@@ -31,6 +31,8 @@ from string import hexdigits
 # Import from pygit2
 from _pygit2 import Repository as _Repository
 from _pygit2 import Oid, GIT_OID_HEXSZ, GIT_OID_MINPREFIXLEN
+from _pygit2 import GIT_CHECKOUT_SAFE_CREATE
+from _pygit2 import Reference
 from pygit2.utils import all
 
 
@@ -89,6 +91,44 @@ class Repository(_Repository):
             )
 
         if direct:
-            return self.git_reference_create(name, target, force)
+            return self.create_reference_direct(name, target, force)
 
-        return self.git_reference_symbolic_create(name, target, force)
+        return self.create_reference_symbolic(name, target, force)
+
+
+    #
+    # Checkout
+    #
+    def checkout(self, refname=None, strategy=GIT_CHECKOUT_SAFE_CREATE):
+        """
+        Checkout the given reference using the given strategy, and update
+        the HEAD.
+        The reference may be a reference name or a Reference object.
+        The default strategy is GIT_CHECKOUT_SAFE_CREATE.
+
+        To checkout from the HEAD, just pass 'HEAD'::
+
+          >>> checkout('HEAD')
+
+        If no reference is given, checkout from the index.
+
+        """
+        # Case 1: Checkout index
+        if refname is None:
+            return self.checkout_index(strategy)
+
+        # Case 2: Checkout head
+        if refname == 'HEAD':
+            return self.checkout_head(strategy)
+
+        # Case 3: Reference
+        if type(refname) is Reference:
+            reference = refname
+            refname = refname.name
+        else:
+            reference = self.lookup_reference(refname)
+
+        oid = reference.resolve().target
+        treeish = self[oid]
+        self.checkout_tree(treeish, strategy)
+        self.head = refname

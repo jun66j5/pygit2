@@ -187,7 +187,6 @@ interfaces::
 .. autoattribute:: pygit2.TreeEntry.oid
 .. autoattribute:: pygit2.TreeEntry.hex
 .. autoattribute:: pygit2.TreeEntry.filemode
-.. automethod:: pygit2.TreeEntry.to_object
 
 
 Creating trees
@@ -221,8 +220,8 @@ Creating blobs
 --------------------
 
 .. automethod:: pygit2.Repository.create_blob
-.. automethod:: pygit2.Repository.create_blob_fromfile
-
+.. automethod:: pygit2.Repository.create_blob_fromworkdir
+.. automethod:: pygit2.Repository.create_blob_fromdisk
 
 Tags
 =================

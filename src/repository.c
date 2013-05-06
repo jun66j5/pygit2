@@ -42,6 +42,7 @@ extern PyObject *GitError;
 extern PyTypeObject IndexType;
 extern PyTypeObject WalkerType;
 extern PyTypeObject SignatureType;
+extern PyTypeObject ObjectType;
 extern PyTypeObject TreeType;
 extern PyTypeObject TreeBuilderType;
 extern PyTypeObject ConfigType;
@@ -183,6 +184,25 @@ Repository_head__get__(Repository *self)
     return wrap_reference(head);
 }
 
+int
+Repository_head__set__(Repository *self, PyObject *py_refname)
+{
+    int err;
+    const char *refname;
+
+    refname = py_str_to_c_str(py_refname, NULL);
+    if (refname == NULL)
+        return -1;
+
+    err = git_repository_set_head(self->repo, refname);
+    if (err < 0) {
+        Error_set_str(err, refname);
+        return -1;
+    }
+
+    return 0;
+}
+
 
 PyDoc_STRVAR(Repository_head_is_detached__doc__,
   "A repository's HEAD is detached when it points directly to a commit\n"
@@ -246,7 +266,8 @@ PyDoc_STRVAR(Repository_git_object_lookup_prefix__doc__,
 PyObject *
 Repository_git_object_lookup_prefix(Repository *self, PyObject *key)
 {
-    int err, len;
+    int err;
+    Py_ssize_t len;
     git_oid oid;
     git_object *obj;
 
@@ -254,8 +275,7 @@ Repository_git_object_lookup_prefix(Repository *self, PyObject *key)
     if (len < 0)
         return NULL;
 
-    err = git_object_lookup_prefix(&obj, self->repo, &oid,
-                                   (unsigned int)len, GIT_OBJ_ANY);
+    err = git_object_lookup_prefix(&obj, self->repo, &oid, len, GIT_OBJ_ANY);
     if (err == 0)
         return wrap_object(obj, self);
 
@@ -332,7 +352,7 @@ Repository_read(Repository *self, PyObject *py_hex)
 {
     git_oid oid;
     git_odb_object *obj;
-    int len;
+    Py_ssize_t len;
     PyObject* tuple;
 
     len = py_str_to_git_oid(py_hex, &oid);
@@ -499,6 +519,38 @@ Repository_config__get__(Repository *self)
     return self->config;
 }
 
+PyDoc_STRVAR(Repository_merge_base__doc__,
+  "merge_base(oid, oid) -> commit\n"
+  "\n"
+  "Find as good common ancestors as possible for a merge.");
+
+PyObject *
+Repository_merge_base(Repository *self, PyObject *args)
+{
+    PyObject *value1;
+    PyObject *value2;
+    git_oid oid;
+    git_oid oid1;
+    git_oid oid2;
+    int err;
+
+    if (!PyArg_ParseTuple(args, "OO", &value1, &value2))
+        return NULL;
+
+    err = py_str_to_git_oid_expand(self->repo, value1, &oid1);
+    if (err < 0)
+        return NULL;
+
+    err = py_str_to_git_oid_expand(self->repo, value2, &oid2);
+    if (err < 0)
+        return NULL;
+
+    err = git_merge_base(&oid, self->repo, &oid1, &oid2);
+    if (err < 0)
+        return Error_set(err);
+
+    return git_oid_to_python(&oid);
+}
 
 PyDoc_STRVAR(Repository_walk__doc__,
   "walk(oid, sort_mode) -> iterator\n"
@@ -511,6 +563,7 @@ Repository_walk(Repository *self, PyObject *args)
     PyObject *value;
     unsigned int sort;
     int err;
+    Py_ssize_t len;
     git_oid oid;
     git_revwalk *walk;
     Walker *py_walker;
@@ -527,10 +580,10 @@ Repository_walk(Repository *self, PyObject *args)
 
     /* Push */
     if (value != Py_None) {
-        err = py_str_to_git_oid_expand(self->repo, value, &oid);
-        if (err < 0) {
+        len = py_str_to_git_oid_expand(self->repo, value, &oid);
+        if (len < 0) {
             git_revwalk_free(walk);
-            return Error_set(err);
+            return Error_set((int)len);
         }
 
         err = git_revwalk_push(walk, &oid);
@@ -580,7 +633,7 @@ Repository_create_blob(Repository *self, PyObject *args)
 PyDoc_STRVAR(Repository_create_blob_fromworkdir__doc__,
   "create_blob_fromworkdir(path) -> bytes\n"
   "\n"
-  "Create a new blob from a file within the working directory.");
+  "Create a new blob from a file within the working directory (raise an error otherwise).");
 
 PyObject *
 Repository_create_blob_fromworkdir(Repository *self, PyObject *args)
@@ -603,7 +656,7 @@ Repository_create_blob_fromworkdir(Repository *self, PyObject *args)
 PyDoc_STRVAR(Repository_create_blob_fromdisk__doc__,
   "create_blob_fromdisk(path) -> bytes\n"
   "\n"
-  "Create a new blob from file.");
+  "Create a new blob from a file anywhere (no working directory check).");
 
 PyObject *
 Repository_create_blob_fromdisk(Repository *self, PyObject *args)
@@ -641,7 +694,8 @@ Repository_create_commit(Repository *self, PyObject *args)
     git_tree *tree = NULL;
     int parent_count;
     git_commit **parents = NULL;
-    int err = 0, i = 0, len;
+    int err = 0, i = 0;
+    Py_ssize_t len;
 
     if (!PyArg_ParseTuple(args, "zO!O!OOO!|s",
                           &update_ref,
@@ -661,7 +715,7 @@ Repository_create_commit(Repository *self, PyObject *args)
     if (message == NULL)
         goto out;
 
-    err = git_tree_lookup_prefix(&tree, self->repo, &oid, (unsigned int)len);
+    err = git_tree_lookup_prefix(&tree, self->repo, &oid, len);
     if (err < 0) {
         Error_set(err);
         goto out;
@@ -719,7 +773,8 @@ Repository_create_tag(Repository *self, PyObject *args)
     char *tag_name, *message;
     git_oid oid;
     git_object *target = NULL;
-    int err, target_type, len;
+    int err, target_type;
+    Py_ssize_t len;
 
     if (!PyArg_ParseTuple(args, "sOiO!s",
                           &tag_name,
@@ -818,7 +873,7 @@ Repository_lookup_reference(Repository *self, PyObject *py_name)
     return wrap_reference(c_reference);
 }
 
-PyDoc_STRVAR(Repository_git_reference_create__doc__,
+PyDoc_STRVAR(Repository_create_reference_direct__doc__,
   "git_reference_create(name, target, force) -> Reference\n"
   "\n"
   "Create a new reference \"name\" which points to an object.\n"
@@ -834,21 +889,22 @@ PyDoc_STRVAR(Repository_git_reference_create__doc__,
   "    repo.git_reference_create('refs/heads/foo', repo.head.hex, False)");
 
 PyObject *
-Repository_git_reference_create(Repository *self,  PyObject *args,
-                                PyObject *kw)
+Repository_create_reference_direct(Repository *self,  PyObject *args,
+                                   PyObject *kw)
 {
     PyObject *py_obj;
     git_reference *c_reference;
     char *c_name;
     git_oid oid;
     int err, force;
+    Py_ssize_t len;
 
     if (!PyArg_ParseTuple(args, "sOi", &c_name, &py_obj, &force))
         return NULL;
 
-    err = py_str_to_git_oid_expand(self->repo, py_obj, &oid);
-    if (err < 0)
-        return Error_set(err);
+    len = py_str_to_git_oid_expand(self->repo, py_obj, &oid);
+    if (len < 0)
+        return Error_set((int)len);
 
     err = git_reference_create(&c_reference, self->repo, c_name, &oid, force);
     if (err < 0)
@@ -857,7 +913,7 @@ Repository_git_reference_create(Repository *self,  PyObject *args,
     return wrap_reference(c_reference);
 }
 
-PyDoc_STRVAR(Repository_git_reference_symbolic_create__doc__,
+PyDoc_STRVAR(Repository_create_reference_symbolic__doc__,
   "git_reference_symbolic_create(name, source, force) -> Reference\n"
   "\n"
   "Create a new reference \"name\" which points to another reference.\n"
@@ -873,8 +929,8 @@ PyDoc_STRVAR(Repository_git_reference_symbolic_create__doc__,
   "    repo.git_reference_symbolic_create('refs/tags/foo', 'refs/heads/master', False)");
 
 PyObject *
-Repository_git_reference_symbolic_create(Repository *self,  PyObject *args,
-                                         PyObject *kw)
+Repository_create_reference_symbolic(Repository *self,  PyObject *args,
+                                     PyObject *kw)
 {
     git_reference *c_reference;
     char *c_name, *c_target;
@@ -969,6 +1025,7 @@ Repository_TreeBuilder(Repository *self, PyObject *args)
     git_tree *tree = NULL;
     git_tree *must_free = NULL;
     int err;
+    Py_ssize_t len;
 
     if (!PyArg_ParseTuple(args, "|O", &py_src))
         return NULL;
@@ -982,8 +1039,8 @@ Repository_TreeBuilder(Repository *self, PyObject *args)
             }
             tree = py_tree->tree;
         } else {
-            err = py_str_to_git_oid_expand(self->repo, py_src, &oid);
-            if (err < 0)
+            len = py_str_to_git_oid_expand(self->repo, py_src, &oid);
+            if (len < 0)
                 return NULL;
 
             err = git_tree_lookup(&tree, self->repo, &oid);
@@ -1066,47 +1123,72 @@ Repository_remotes__get__(Repository *self)
 }
 
 
-PyDoc_STRVAR(Repository_checkout__doc__,
-  "checkout([strategy:int, reference:Reference])\n"
-  "\n"
-  "Checks out a tree by a given reference and modifies the HEAD pointer\n"
-  "Standard checkout strategy is pygit2.GIT_CHECKOUT_SAFE_CREATE\n"
-  "If no reference is given, checkout will use HEAD instead.");
+PyDoc_STRVAR(Repository_checkout_head__doc__,
+    "checkout_head(strategy)\n"
+    "\n"
+    "Checkout the head using the given strategy.");
 
 PyObject *
-Repository_checkout(Repository *self, PyObject *args, PyObject *kw)
+Repository_checkout_head(Repository *self, PyObject *args)
 {
     git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
-    unsigned int strategy = GIT_CHECKOUT_SAFE_CREATE;
-    Reference* ref = NULL;
-    git_object* object;
-    const git_oid* id;
-    int err, head = 0;
+    unsigned int strategy;
+    int err;
 
-    static char *kwlist[] = {"strategy", "reference", "head", NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, kw, "|IO!i", kwlist,
-                                     &strategy, &ReferenceType, &ref, &head))
+    if (!PyArg_ParseTuple(args, "I", &strategy))
         return NULL;
 
-    if (ref != NULL) { /* checkout from treeish */
-        id = git_reference_target(ref->reference);
-        err = git_object_lookup(&object, self->repo, id, GIT_OBJ_COMMIT);
-        if (err == GIT_OK) {
-            opts.checkout_strategy = strategy;
-            err = git_checkout_tree(self->repo, object, &opts);
-            if (err == GIT_OK) {
-                err = git_repository_set_head(self->repo,
-                          git_reference_name(ref->reference));
-            }
-            git_object_free(object);
-        }
-    } else { /* checkout from head / index */
-        opts.checkout_strategy = strategy;
-        err = (!head) ? git_checkout_index(self->repo, NULL, &opts) :
-                        git_checkout_head(self->repo, &opts);
-    }
+    opts.checkout_strategy = strategy;
+    err = git_checkout_head(self->repo, &opts);
+    if (err < 0)
+        return Error_set(err);
 
+    Py_RETURN_NONE;
+}
+
+
+PyDoc_STRVAR(Repository_checkout_index__doc__,
+    "checkout_index(strategy)\n"
+    "\n"
+    "Checkout the index using the given strategy.");
+
+PyObject *
+Repository_checkout_index(Repository *self, PyObject *args)
+{
+    git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+    unsigned int strategy;
+    int err;
+
+    if (!PyArg_ParseTuple(args, "I", &strategy))
+        return NULL;
+
+    opts.checkout_strategy = strategy;
+    err = git_checkout_index(self->repo, NULL, &opts);
+    if (err < 0)
+        return Error_set(err);
+
+    Py_RETURN_NONE;
+}
+
+
+PyDoc_STRVAR(Repository_checkout_tree__doc__,
+    "checkout_tree(treeish, strategy)\n"
+    "\n"
+    "Checkout the given tree, commit or tag, using the given strategy.");
+
+PyObject *
+Repository_checkout_tree(Repository *self, PyObject *args)
+{
+    git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+    unsigned int strategy;
+    Object *py_object;
+    int err;
+
+    if (!PyArg_ParseTuple(args, "O!I", &ObjectType, &py_object, &strategy))
+        return NULL;
+
+    opts.checkout_strategy = strategy;
+    err = git_checkout_tree(self->repo, py_object->obj, &opts);
     if (err < 0)
         return Error_set(err);
 
@@ -1117,7 +1199,7 @@ Repository_checkout(Repository *self, PyObject *args, PyObject *kw)
 PyDoc_STRVAR(Repository_notes__doc__, "");
 
 PyObject *
-Repository_notes(Repository *self, PyObject* args)
+Repository_notes(Repository *self, PyObject *args)
 {
     NoteIter *iter = NULL;
     char *ref = "refs/notes/commits";
@@ -1209,17 +1291,20 @@ PyMethodDef Repository_methods[] = {
     METHOD(Repository, create_tag, METH_VARARGS),
     METHOD(Repository, TreeBuilder, METH_VARARGS),
     METHOD(Repository, walk, METH_VARARGS),
+    METHOD(Repository, merge_base, METH_VARARGS),
     METHOD(Repository, read, METH_O),
     METHOD(Repository, write, METH_VARARGS),
-    METHOD(Repository, git_reference_create, METH_VARARGS),
-    METHOD(Repository, git_reference_symbolic_create, METH_VARARGS),
+    METHOD(Repository, create_reference_direct, METH_VARARGS),
+    METHOD(Repository, create_reference_symbolic, METH_VARARGS),
     METHOD(Repository, listall_references, METH_VARARGS),
     METHOD(Repository, lookup_reference, METH_O),
     METHOD(Repository, revparse_single, METH_O),
     METHOD(Repository, status, METH_NOARGS),
     METHOD(Repository, status_file, METH_O),
     METHOD(Repository, create_remote, METH_VARARGS),
-    METHOD(Repository, checkout, METH_VARARGS|METH_KEYWORDS),
+    METHOD(Repository, checkout_head, METH_VARARGS),
+    METHOD(Repository, checkout_index, METH_VARARGS),
+    METHOD(Repository, checkout_tree, METH_VARARGS),
     METHOD(Repository, notes, METH_VARARGS),
     METHOD(Repository, create_note, METH_VARARGS),
     METHOD(Repository, lookup_note, METH_VARARGS),
@@ -1230,7 +1315,7 @@ PyMethodDef Repository_methods[] = {
 PyGetSetDef Repository_getseters[] = {
     GETTER(Repository, index),
     GETTER(Repository, path),
-    GETTER(Repository, head),
+    GETSET(Repository, head),
     GETTER(Repository, head_is_detached),
     GETTER(Repository, head_is_orphaned),
     GETTER(Repository, is_empty),

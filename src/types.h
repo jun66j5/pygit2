@@ -130,7 +130,6 @@ SIMPLE_TYPE(TreeBuilder, git_treebuilder, bld)
 
 typedef struct {
     PyObject_HEAD
-    PyObject *owner; /* Tree or TreeBuilder */
     const git_tree_entry *entry;
 } TreeEntry;
 
@@ -175,8 +174,8 @@ typedef struct {
 typedef struct {
     PyObject_HEAD
     git_reflog *reflog;
-    int i;
-    int size;
+    size_t i;
+    size_t size;
 } RefLogIter;
 
 
