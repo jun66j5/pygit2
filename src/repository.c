@@ -36,6 +36,7 @@
 #include "note.h"
 #include "repository.h"
 #include "remote.h"
+#include <git2/odb_backend.h>
 
 extern PyObject *GitError;
 
@@ -62,20 +63,6 @@ int_to_loose_object_type(int type_id)
         case GIT_OBJ_TAG: return GIT_OBJ_TAG;
         default: return GIT_OBJ_BAD;
     }
-}
-
-PyObject *
-lookup_object(Repository *repo, const git_oid *oid, git_otype type)
-{
-    int err;
-    git_object *obj;
-
-    err = git_object_lookup_prefix(&obj, repo->repo, oid, GIT_OID_HEXSZ,
-                                   type);
-    if (err < 0)
-        return Error_set_oid(err, oid, GIT_OID_HEXSZ);
-
-    return wrap_object(obj, repo);
 }
 
 int

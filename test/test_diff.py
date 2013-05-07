@@ -132,6 +132,7 @@ class DiffTest(utils.BareRepoTestCase):
 
         patch = diff[0]
         hunk = patch.hunks[0]
+        self.assertEqual(hunk.origin, '+')
         self.assertEqual(hunk.old_start, 1)
         self.assertEqual(hunk.old_lines, 1)
         self.assertEqual(hunk.new_start, 1)
@@ -139,6 +140,12 @@ class DiffTest(utils.BareRepoTestCase):
 
         self.assertEqual(patch.old_file_path, 'a')
         self.assertEqual(patch.new_file_path, 'a')
+
+    def test_diff_empty_tree(self):
+        commit_a = self.repo[COMMIT_SHA1_1]
+        diff = commit_a.tree.diff(empty_tree=True)
+        entries = [p.new_file_path for p in diff]
+        self.assertAll(lambda x: commit_a.tree[x], entries)
 
     def test_diff_tree_opts(self):
         commit_c = self.repo[COMMIT_SHA1_3]
@@ -216,9 +223,9 @@ class DiffTest(utils.BareRepoTestCase):
         #~ Must pass GIT_DIFF_INCLUDE_UNMODIFIED if you expect to emulate
         #~ --find-copies-harder during rename transformion...
         diff = commit_a.tree.diff(commit_b.tree, GIT_DIFF_INCLUDE_UNMODIFIED)
-        self.assertAll(lambda x: x.status is not pygit2.GIT_DELTA_RENAMED, diff)
+        self.assertAll(lambda x: x.status != 'R', diff)
         diff.find_similar()
-        self.assertAny(lambda x: x.status is pygit2.GIT_DELTA_RENAMED, diff)
+        self.assertAny(lambda x: x.status == 'R', diff)
 
 if __name__ == '__main__':
     unittest.main()

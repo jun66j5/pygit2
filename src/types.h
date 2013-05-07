@@ -111,13 +111,14 @@ typedef struct {
     const char * new_file_path;
     char* old_oid;
     char* new_oid;
-    unsigned status;
+    char status;
     unsigned similarity;
 } Patch;
 
 typedef struct {
     PyObject_HEAD
     PyObject* lines;
+    char origin;
     int old_start;
     int old_lines;
     int new_start;
@@ -191,7 +192,5 @@ typedef struct {
 /* git_remote */
 SIMPLE_TYPE(Remote, git_remote, remote)
 
-
-PyObject* lookup_object(Repository *repo, const git_oid *oid, git_otype type);
 
 #endif
