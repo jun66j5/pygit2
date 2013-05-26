@@ -107,6 +107,7 @@ PyTypeObject RefLogIterType = {
 void
 Reference_dealloc(Reference *self)
 {
+    Py_CLEAR(self->repo);
     git_reference_free(self->reference);
     PyObject_Del(self);
 }
@@ -191,7 +192,7 @@ Reference_resolve(Reference *self, PyObject *args)
     if (err < 0)
         return Error_set(err);
 
-    return wrap_reference(c_reference);
+    return wrap_reference(c_reference, self->repo);
 }
 
 
@@ -226,20 +227,15 @@ Reference_target__set__(Reference *self, PyObject *py_target)
     git_oid oid;
     char *c_name;
     int err;
-    Py_ssize_t len;
     git_reference *new_ref;
-    git_repository *repo;
 
     CHECK_REFERENCE_INT(self);
 
     /* Case 1: Direct */
     if (GIT_REF_OID == git_reference_type(self->reference)) {
-        repo = git_reference_owner(self->reference);
-        len = py_str_to_git_oid_expand(repo, py_target, &oid);
-        if (len < 0) {
-            err = (int)len;
-            goto error;
-        }
+        err = py_oid_to_git_oid_expand(self->repo->repo, py_target, &oid);
+        if (err < 0)
+            return err;
 
         err = git_reference_set_target(&new_ref, self->reference, &oid);
         if (err < 0)
@@ -464,13 +460,18 @@ PyTypeObject ReferenceType = {
 
 
 PyObject *
-wrap_reference(git_reference * c_reference)
+wrap_reference(git_reference * c_reference, Repository *repo)
 {
     Reference *py_reference=NULL;
 
     py_reference = PyObject_New(Reference, &ReferenceType);
-    if (py_reference)
+    if (py_reference) {
         py_reference->reference = c_reference;
+        if (repo) {
+            py_reference->repo = repo;
+            Py_INCREF(repo);
+        }
+    }
 
     return (PyObject *)py_reference;
 }

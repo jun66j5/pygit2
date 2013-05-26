@@ -20,9 +20,9 @@ Pygit2 links:
 Quick install guide
 ===================
 
-1. Checkout libgi2 v0.18.0::
+1. Checkout the libgit2 stable branch::
 
-   $ git clone git://github.com/libgit2/libgit2.git -b v0.18.0
+   $ git clone git://github.com/libgit2/libgit2.git -b master
 
 2. Build and install libgit2
    https://github.com/libgit2/libgit2/#building-libgit2---using-cmake
@@ -53,13 +53,14 @@ This is the list of authors of pygit2, sorted by number of commits (as shown by
 - W Trevor King
 - Dave Borowitz
 - Carlos Martín Nieto
+- Richo Healey
 - Christian Boos
 - Julien Miotte
-- Richo Healey
 - Martin Lenders
 - Xavier Delannoy
 - Yonggang Luo
 - Valentin Haenel
+- Bernardo Heynemann
 - John Szakmeister
 - David Versmisse
 - Petr Hosek
@@ -68,7 +69,10 @@ This is the list of authors of pygit2, sorted by number of commits (as shown by
 - Petr Viktorin
 - Alex Chamberlain
 - Amit Bakshi
+- Andrey Devyatkin
 - Ben Davis
+- Daniel Rodríguez Troitiño
+- Hervé Cauwelier
 - Jared Flatow
 - Sarath Lakshman
 - Vicent Marti
@@ -82,11 +86,13 @@ This is the list of authors of pygit2, sorted by number of commits (as shown by
 - Eric Schrijver
 - Erik van Zijst
 - Ferengee
+- Fraser Tweedale
 - Hugh Cole-Baker
 - Josh Bleecher Snyder
 - Jun Omae
 - Ridge Kennedy
 - Rui Abreu Ferreira
+- Xu Tao
 - pistacchio
 
 

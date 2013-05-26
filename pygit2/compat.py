@@ -33,5 +33,3 @@ except NameError:
             if not element:
                 return False
         return True
-
-# feel free to add utils functions here
