@@ -30,6 +30,7 @@
 import unittest
 import pygit2
 from pygit2 import GIT_DIFF_INCLUDE_UNMODIFIED
+from pygit2 import GIT_DIFF_IGNORE_WHITESPACE, GIT_DIFF_IGNORE_WHITESPACE_EOL
 utils = __import__('utils', globals(), locals(), [])
 from itertools import chain
 
@@ -96,6 +97,7 @@ DIFF_INDEX_TO_WORK_EXPECTED = [
 HUNK_EXPECTED = """- a contents 2
 + a contents
 """
+
 
 class DiffDirtyTest(utils.DirtyRepoTestCase):
     def test_diff_empty_index(self):
@@ -181,9 +183,9 @@ class DiffTest(utils.BareRepoTestCase):
         diff = commit_a.tree.diff_to_tree()
 
         def get_context_for_lines(diff):
-          hunks = chain(*map(lambda x: x.hunks, [p for p in diff]))
-          lines = chain(*map(lambda x: x.lines, hunks))
-          return map(lambda x: x[0], lines)
+            hunks = chain(*map(lambda x: x.hunks, [p for p in diff]))
+            lines = chain(*map(lambda x: x.lines, hunks))
+            return map(lambda x: x[0], lines)
 
         entries = [p.new_file_path for p in diff]
         self.assertAll(lambda x: commit_a.tree[x], entries)
@@ -195,15 +197,15 @@ class DiffTest(utils.BareRepoTestCase):
         self.assertAll(lambda x: '+' == x, get_context_for_lines(diff_swaped))
 
     def test_diff_revparse(self):
-        diff = self.repo.diff('HEAD','HEAD~6')
+        diff = self.repo.diff('HEAD', 'HEAD~6')
         self.assertEqual(type(diff), pygit2.Diff)
 
     def test_diff_tree_opts(self):
         commit_c = self.repo[COMMIT_SHA1_3]
         commit_d = self.repo[COMMIT_SHA1_4]
 
-        for flag in [pygit2.GIT_DIFF_IGNORE_WHITESPACE,
-                    pygit2.GIT_DIFF_IGNORE_WHITESPACE_EOL]:
+        for flag in [GIT_DIFF_IGNORE_WHITESPACE,
+                     GIT_DIFF_IGNORE_WHITESPACE_EOL]:
             diff = commit_c.tree.diff_to_tree(commit_d.tree, flag)
             self.assertTrue(diff is not None)
             self.assertEqual(0, len(diff[0].hunks))
@@ -275,7 +277,7 @@ class DiffTest(utils.BareRepoTestCase):
         #~ Must pass GIT_DIFF_INCLUDE_UNMODIFIED if you expect to emulate
         #~ --find-copies-harder during rename transformion...
         diff = commit_a.tree.diff_to_tree(commit_b.tree,
-            GIT_DIFF_INCLUDE_UNMODIFIED)
+                                          GIT_DIFF_INCLUDE_UNMODIFIED)
         self.assertAll(lambda x: x.status != 'R', diff)
         diff.find_similar()
         self.assertAny(lambda x: x.status == 'R', diff)

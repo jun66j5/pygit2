@@ -34,6 +34,7 @@ utils = __import__('utils', globals(), locals(), [])
 
 TREE_SHA = '967fce8df97cc71722d3c2a5930ef3e6f1d27b12'
 
+
 class TreeBuilderTest(utils.BareRepoTestCase):
 
     def test_new_empty_treebuilder(self):

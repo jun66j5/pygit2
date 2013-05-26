@@ -27,7 +27,7 @@
 
 """Tests for Blob objects."""
 
-import os
+from os.path import dirname, join
 import unittest
 
 import pygit2
@@ -89,14 +89,14 @@ class BlobTest(utils.RepoTestCase):
         self.assertEqual(len(BLOB_FILE_CONTENT), blob.size)
         self.assertEqual(BLOB_FILE_CONTENT, blob.read_raw())
 
-    def test_create_blob_outside_workdir(self):
 
-        path = os.path.join(os.path.dirname(__file__), 'data', self.repo_dir + '.tar')
+    def test_create_blob_outside_workdir(self):
+        path = join(dirname(__file__), 'data', self.repo_dir + '.tar')
         self.assertRaises(KeyError, self.repo.create_blob_fromworkdir, path)
 
-    def test_create_blob_fromdisk(self):
 
-        path = os.path.join(os.path.dirname(__file__), 'data', self.repo_dir + '.tar')
+    def test_create_blob_fromdisk(self):
+        path = join(dirname(__file__), 'data', self.repo_dir + '.tar')
         blob_oid = self.repo.create_blob_fromdisk(path)
         blob = self.repo[blob_oid]
 

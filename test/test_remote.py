@@ -39,12 +39,13 @@ REMOTE_FETCHSPEC_DST = 'refs/remotes/origin/*'
 REMOTE_REPO_OBJECTS = 30
 REMOTE_REPO_BYTES = 2758
 
+
 class RepositoryTest(utils.RepoTestCase):
     def test_remote_create(self):
         name = 'upstream'
         url = 'git://github.com/libgit2/pygit2.git'
 
-        remote = self.repo.create_remote(name, url);
+        remote = self.repo.create_remote(name, url)
 
         self.assertEqual(type(remote), pygit2.Remote)
         self.assertEqual(name, remote.name)
@@ -94,7 +95,7 @@ class RepositoryTest(utils.RepoTestCase):
 
         name = 'upstream'
         url = 'git://github.com/libgit2/pygit2.git'
-        remote = self.repo.create_remote(name, url);
+        remote = self.repo.create_remote(name, url)
         self.assertTrue(remote.name in [x.name for x in self.repo.remotes])
 
 

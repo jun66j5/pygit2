@@ -40,6 +40,7 @@ utils = __import__('utils', globals(), locals(), [])
 HEX = "15b648aec6ed045b5ca6f57f8b7831a8b4757298"
 RAW = unhexlify(HEX.encode('ascii'))
 
+
 class OidTest(utils.BareRepoTestCase):
 
     def test_raw(self):
