@@ -57,7 +57,7 @@ except:
 try:
     bytes = bytes
 except NameError:
-    bytes = lambda _: _
+    bytes = str
 
 import pygit2
 
