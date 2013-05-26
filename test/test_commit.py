@@ -30,7 +30,7 @@
 import unittest
 
 from pygit2 import GIT_OBJ_COMMIT, Signature
-import utils
+utils = __import__('utils', globals(), locals(), [])
 
 
 COMMIT_SHA = '5fe808e8953c12735680c257f56600cb0de44b10'

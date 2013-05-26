@@ -30,7 +30,7 @@
 import unittest
 
 from pygit2 import GIT_SORT_TIME, GIT_SORT_REVERSE
-import utils
+utils = __import__('utils', globals(), locals(), [])
 
 
 # In the order given by git log

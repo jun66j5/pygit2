@@ -31,7 +31,7 @@ import os
 import unittest
 
 import pygit2
-import utils
+utils = __import__('utils', globals(), locals(), [])
 
 
 class IndexBareTest(utils.BareRepoTestCase):

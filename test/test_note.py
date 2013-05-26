@@ -30,7 +30,7 @@
 import unittest
 
 from pygit2 import Signature
-import utils
+utils = __import__('utils', globals(), locals(), [])
 
 NOTE = ('6c8980ba963cad8b25a9bcaf68d4023ee57370d8', 'note message')
 

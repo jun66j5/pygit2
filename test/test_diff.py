@@ -30,7 +30,7 @@
 import unittest
 import pygit2
 from pygit2 import GIT_DIFF_INCLUDE_UNMODIFIED
-import utils
+utils = __import__('utils', globals(), locals(), [])
 from itertools import chain
 
 

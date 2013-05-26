@@ -31,7 +31,7 @@ import os
 import unittest
 
 import pygit2
-import utils
+utils = __import__('utils', globals(), locals(), [])
 
 
 BLOB_SHA = 'a520c24d85fbfc815d385957eed41406ca5a860b'

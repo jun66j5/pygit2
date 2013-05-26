@@ -34,7 +34,7 @@ import unittest
 
 # Import from pygit2
 from pygit2 import Oid
-import utils
+utils = __import__('utils', globals(), locals(), [])
 
 
 HEX = "15b648aec6ed045b5ca6f57f8b7831a8b4757298"

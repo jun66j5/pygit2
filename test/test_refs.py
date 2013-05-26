@@ -30,7 +30,7 @@
 import unittest
 
 from pygit2 import GitError, GIT_REF_OID, GIT_REF_SYMBOLIC
-import utils
+utils = __import__('utils', globals(), locals(), [])
 
 
 LAST_COMMIT = '2be5719152d4f82c7302b1c0932d8e5f0a4a0e98'

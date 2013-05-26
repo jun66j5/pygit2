@@ -42,7 +42,7 @@ from pygit2 import (
 )
 from pygit2 import Oid
 import pygit2
-import utils
+utils = __import__('utils', globals(), locals(), [])
 
 
 HEAD_SHA = '784855caf26449a1914d2cf62d12b9374d76ae78'

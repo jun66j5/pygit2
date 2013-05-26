@@ -31,7 +31,7 @@ import os
 import unittest
 
 import pygit2
-import utils
+utils = __import__('utils', globals(), locals(), [])
 
 
 config_filename = "test_config"

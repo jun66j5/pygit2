@@ -30,7 +30,7 @@
 
 import unittest
 import pygit2
-import utils
+utils = __import__('utils', globals(), locals(), [])
 
 REMOTE_NAME = 'origin'
 REMOTE_URL = 'git://github.com/libgit2/pygit2.git'

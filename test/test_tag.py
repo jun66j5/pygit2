@@ -30,7 +30,7 @@
 import unittest
 
 import pygit2
-import utils
+utils = __import__('utils', globals(), locals(), [])
 
 
 TAG_SHA = '3d2962987c695a29f1f80b6c3aa4ec046ef44369'
