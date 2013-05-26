@@ -125,11 +125,6 @@ PyUnicode_FromStringAndSize(const char *u, Py_ssize_t size)
 }
 #endif
 
-#if PY_MAJOR_VERSION == 2
-  #define PyBytes_FromString PyString_FromString
-  #define PyBytes_FromStringAndSize PyString_FromStringAndSize
-#endif
-
 /* Utilities */
 #define to_unicode(x, encoding, errors)\
         to_unicode_n(x, strlen(x), encoding, errors)
