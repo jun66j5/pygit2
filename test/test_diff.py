@@ -265,7 +265,7 @@ class DiffTest(utils.BareRepoTestCase):
         commit_b = self.repo[COMMIT_SHA1_2]
         patch = commit_a.tree.diff_to_tree(commit_b.tree)[0]
         hunk = patch.hunks[0]
-        lines = ('{0} {1}'.format(*x) for x in hunk.lines)
+        lines = ('%s %s' % x for x in hunk.lines)
         self.assertEqual(HUNK_EXPECTED, ''.join(lines))
 
     def test_find_similar(self):
