@@ -168,7 +168,7 @@ classifiers = [
     "Topic :: Software Development :: Version Control"]
 
 
-readme = codecs.open('README.rst', 'r', 'utf-8')
+readme = codecs.open('README.rst', 'r')
 try:
     long_description = readme.read()
 finally:
@@ -181,7 +181,7 @@ setup(name='pygit2',
       url='http://github.com/libgit2/pygit2',
       classifiers=classifiers,
       license='GPLv2',
-      maintainer=u('J. David Ibáñez'),
+      maintainer=u('J. David Ibáñez').encode('utf-8'),
       maintainer_email='jdavid.ibp@gmail.com',
       long_description=long_description,
       packages=['pygit2'],
