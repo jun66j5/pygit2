@@ -107,6 +107,7 @@ PyInt_FromSize_t(size_t ival)
   typedef Py_ssize_t (*lenfunc)(PyObject *);
   #define PY_SSIZE_T_MAX INT_MAX
   #define PY_SSIZE_T_MIN INT_MIN
+  #define PyInt_AsSsize_t PyInt_AsLong
 #endif
 
 /* Utilities */
