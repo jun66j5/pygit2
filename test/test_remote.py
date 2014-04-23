@@ -75,16 +75,19 @@ class RepositoryTest(utils.RepoTestCase):
         self.assertRaisesAssign(ValueError, remote, 'url', '')
 
 
-    def test_remote_fetchspec(self):
+    def test_refspec(self):
         remote = self.repo.remotes[0]
 
-        self.assertEqual(REMOTE_FETCHSPEC_SRC, remote.fetchspec[0])
-        self.assertEqual(REMOTE_FETCHSPEC_DST, remote.fetchspec[1])
+        self.assertEqual(remote.refspec_count, 1)
+        refspec = remote.get_refspec(0)
+        self.assertEqual(refspec[0], REMOTE_FETCHSPEC_SRC)
+        self.assertEqual(refspec[1], REMOTE_FETCHSPEC_DST)
 
-        new_fetchspec = ('refs/foo/*', 'refs/remotes/foo/*')
-        remote.fetchspec = new_fetchspec
-        self.assertEqual(new_fetchspec[0], remote.fetchspec[0])
-        self.assertEqual(new_fetchspec[1], remote.fetchspec[1])
+#       new_fetchspec = ('refs/foo/*', 'refs/remotes/foo/*')
+#       remote.fetchspec = new_fetchspec
+#       refspec = remote.get_refspec(0)
+#       self.assertEqual(new_fetchspec[0], refspec[0])
+#       self.assertEqual(new_fetchspec[1], refspec[1])
 
 
     def test_remote_list(self):
@@ -97,6 +100,19 @@ class RepositoryTest(utils.RepoTestCase):
         url = 'git://github.com/libgit2/pygit2.git'
         remote = self.repo.create_remote(name, url)
         self.assertTrue(remote.name in [x.name for x in self.repo.remotes])
+
+
+    def test_remote_save(self):
+        remote = self.repo.remotes[0]
+
+        remote.name = 'new-name'
+        remote.url = 'http://example.com/test.git'
+
+        remote.save()
+
+        self.assertEqual('new-name', self.repo.remotes[0].name)
+        self.assertEqual('http://example.com/test.git',
+                         self.repo.remotes[0].url)
 
 
 class EmptyRepositoryTest(utils.EmptyRepoTestCase):

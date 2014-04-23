@@ -52,10 +52,6 @@ class ReferencesTest(utils.RepoTestCase):
                          ['refs/heads/i18n', 'refs/heads/master',
                           'refs/tags/version1'])
 
-        # Now we list only the symbolic references
-        self.assertEqual(repo.listall_references(GIT_REF_SYMBOLIC),
-                         ('refs/tags/version1', ))
-
     def test_head(self):
         head = self.repo.head
         self.assertEqual(LAST_COMMIT, self.repo[head.target].hex)
@@ -205,6 +201,12 @@ class ReferencesTest(utils.RepoTestCase):
 
 #   def test_packall_references(self):
 #       self.repo.packall_references()
+
+
+    def test_get_object(self):
+        repo = self.repo
+        ref = repo.lookup_reference('refs/heads/master')
+        self.assertEqual(repo[ref.target].oid, ref.get_object().oid)
 
 
 if __name__ == '__main__':

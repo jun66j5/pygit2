@@ -59,6 +59,7 @@ extern PyTypeObject ConfigType;
 extern PyTypeObject ReferenceType;
 extern PyTypeObject RefLogIterType;
 extern PyTypeObject RefLogEntryType;
+extern PyTypeObject BranchType;
 extern PyTypeObject SignatureType;
 extern PyTypeObject RemoteType;
 extern PyTypeObject NoteType;
@@ -136,25 +137,23 @@ clone_repository(PyObject *self, PyObject *args) {
     const char *remote_name, *push_url, *fetch_spec;
     const char *push_spec, *checkout_branch;
     int err;
+    git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
 
     if (!PyArg_ParseTuple(args, "zzIzzzzz",
-                &url, &path, &bare, &remote_name, &push_url,
-                &fetch_spec, &push_spec, &checkout_branch))
+                          &url, &path, &bare, &remote_name, &push_url,
+                          &fetch_spec, &push_spec, &checkout_branch))
         return NULL;
 
-    git_clone_options opts = {
-        .version=1,
-        .bare=bare,
-        .remote_name=remote_name,
-        .pushurl=push_url,
-        .fetch_spec=fetch_spec,
-        .push_spec=push_spec,
-        .checkout_branch=checkout_branch
-    };
+    opts.bare = bare;
+    opts.remote_name = remote_name;
+    opts.pushurl = push_url;
+    opts.fetch_spec = fetch_spec;
+    opts.push_spec = push_spec;
+    opts.checkout_branch = checkout_branch;
 
     err = git_clone(&repo, url, path, &opts);
     if (err < 0)
-        return Error_set_str(err, path);
+        return Error_set(err);
 
     git_repository_free(repo);
     Py_RETURN_NONE;
@@ -236,7 +235,7 @@ hash(PyObject *self, PyObject *args)
 PyMethodDef module_methods[] = {
     {"init_repository", init_repository, METH_VARARGS, init_repository__doc__},
     {"clone_repository", clone_repository, METH_VARARGS,
-        clone_repository__doc__},
+     clone_repository__doc__},
     {"discover_repository", discover_repository, METH_VARARGS,
      discover_repository__doc__},
     {"hashfile", hashfile, METH_VARARGS, hashfile__doc__},
@@ -330,6 +329,14 @@ moduleinit(PyObject* m)
     ADD_CONSTANT_INT(m, GIT_REF_OID)
     ADD_CONSTANT_INT(m, GIT_REF_SYMBOLIC)
     ADD_CONSTANT_INT(m, GIT_REF_LISTALL)
+
+    /*
+     * Branches
+     */
+    INIT_TYPE(BranchType, &ReferenceType, PyType_GenericNew);
+    ADD_TYPE(m, Branch)
+    ADD_CONSTANT_INT(m, GIT_BRANCH_LOCAL)
+    ADD_CONSTANT_INT(m, GIT_BRANCH_REMOTE)
 
     /*
      * Index & Working copy

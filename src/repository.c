@@ -36,6 +36,7 @@
 #include "note.h"
 #include "repository.h"
 #include "remote.h"
+#include "branch.h"
 #include <git2/odb_backend.h>
 
 extern PyObject *GitError;
@@ -44,6 +45,7 @@ extern PyTypeObject IndexType;
 extern PyTypeObject WalkerType;
 extern PyTypeObject SignatureType;
 extern PyTypeObject ObjectType;
+extern PyTypeObject CommitType;
 extern PyTypeObject TreeType;
 extern PyTypeObject TreeBuilderType;
 extern PyTypeObject ConfigType;
@@ -274,6 +276,33 @@ Repository_git_object_lookup_prefix(Repository *self, PyObject *key)
 }
 
 
+PyDoc_STRVAR(Repository_lookup_branch__doc__,
+  "lookup_branch(branch_name, [branch_type]) -> Object\n"
+  "\n"
+  "Returns the Git reference for the given branch name (local or remote).");
+
+PyObject *
+Repository_lookup_branch(Repository *self, PyObject *args)
+{
+    git_reference *c_reference;
+    const char *c_name;
+    git_branch_t branch_type = GIT_BRANCH_LOCAL;
+    int err;
+
+    if (!PyArg_ParseTuple(args, "s|I", &c_name, &branch_type))
+        return NULL;
+
+    err = git_branch_lookup(&c_reference, self->repo, c_name, branch_type);
+    if (err == 0)
+        return wrap_branch(c_reference, self);
+
+    if (err == GIT_ENOTFOUND)
+        Py_RETURN_NONE;
+
+    return Error_set(err);
+}
+
+
 PyDoc_STRVAR(Repository_revparse_single__doc__,
   "revparse_single(revision) -> Object\n"
   "\n"
@@ -501,7 +530,7 @@ Repository_config__get__(Repository *self)
         py_config->config = config;
         self->config = (PyObject*)py_config;
         // We need 2 refs here.
-        // One is returned, one is keep internally.
+        // One is returned, one is kept internally.
         Py_INCREF(self->config);
     } else {
         Py_INCREF(self->config);
@@ -816,35 +845,63 @@ Repository_create_tag(Repository *self, PyObject *args)
 }
 
 
+PyDoc_STRVAR(Repository_create_branch__doc__,
+  "create_branch(name, commit, force=False) -> bytes\n"
+  "\n"
+  "Create a new branch \"name\" which points to a commit.\n"
+  "\n"
+  "Arguments:\n"
+  "\n"
+  "force\n"
+  "    If True branches will be overridden, otherwise (the default) an\n"
+  "    exception is raised.\n"
+  "\n"
+  "Examples::\n"
+  "\n"
+  "    repo.create_branch('foo', repo.head.hex, force=False)");
+
+PyObject* Repository_create_branch(Repository *self, PyObject *args)
+{
+    Commit *py_commit;
+    git_reference *c_reference;
+    char *c_name;
+    int err, force = 0;
+
+    if (!PyArg_ParseTuple(args, "sO!|i", &c_name, &CommitType, &py_commit, &force))
+        return NULL;
+
+    err = git_branch_create(&c_reference, self->repo, c_name, py_commit->commit, force);
+    if (err < 0)
+        return Error_set(err);
+
+    return wrap_branch(c_reference, self);
+}
+
+
 PyDoc_STRVAR(Repository_listall_references__doc__,
-  "listall_references([flags]) -> (str, ...)\n"
+  "listall_references() -> (str, ...)\n"
   "\n"
   "Return a tuple with all the references in the repository.");
 
 PyObject *
 Repository_listall_references(Repository *self, PyObject *args)
 {
-    unsigned list_flags=GIT_REF_LISTALL;
     git_strarray c_result;
     PyObject *py_result, *py_string;
     unsigned index;
     int err;
 
-    /* 1- Get list_flags */
-    if (!PyArg_ParseTuple(args, "|I", &list_flags))
-        return NULL;
-
-    /* 2- Get the C result */
-    err = git_reference_list(&c_result, self->repo, list_flags);
+    /* Get the C result */
+    err = git_reference_list(&c_result, self->repo);
     if (err < 0)
         return Error_set(err);
 
-    /* 3- Create a new PyTuple */
+    /* Create a new PyTuple */
     py_result = PyTuple_New(c_result.count);
     if (py_result == NULL)
         goto out;
 
-    /* 4- Fill it */
+    /* Fill it */
     for (index=0; index < c_result.count; index++) {
         py_string = to_path((c_result.strings)[index]);
         if (py_string == NULL) {
@@ -857,6 +914,77 @@ Repository_listall_references(Repository *self, PyObject *args)
 out:
     git_strarray_free(&c_result);
     return py_result;
+}
+
+
+PyDoc_STRVAR(Repository_listall_branches__doc__,
+  "listall_branches([flags]) -> (str, ...)\n"
+  "\n"
+  "Return a tuple with all the branches in the repository.");
+
+struct branch_foreach_s {
+    PyObject *tuple;
+    Py_ssize_t pos;
+};
+
+int
+branch_foreach_cb(const char *branch_name, git_branch_t branch_type, void *payload)
+{
+    /* This is the callback that will be called in git_branch_foreach. It
+     * will be called for every branch.
+     * payload is a struct branch_foreach_s.
+     */
+    int err;
+    struct branch_foreach_s *payload_s = (struct branch_foreach_s *)payload;
+
+    if (PyTuple_Size(payload_s->tuple) <= payload_s->pos)
+    {
+        err = _PyTuple_Resize(&(payload_s->tuple), payload_s->pos * 2);
+        if (err) {
+            Py_CLEAR(payload_s->tuple);
+            return GIT_ERROR;
+        }
+    }
+
+    PyObject *py_branch_name = to_path(branch_name);
+    if (py_branch_name == NULL) {
+        Py_CLEAR(payload_s->tuple);
+        return GIT_ERROR;
+    }
+
+    PyTuple_SET_ITEM(payload_s->tuple, payload_s->pos++, py_branch_name);
+
+    return GIT_OK;
+}
+
+
+PyObject *
+Repository_listall_branches(Repository *self, PyObject *args)
+{
+    unsigned int list_flags = GIT_BRANCH_LOCAL;
+    int err;
+
+    /* 1- Get list_flags */
+    if (!PyArg_ParseTuple(args, "|I", &list_flags))
+        return NULL;
+
+    /* 2- Get the C result */
+    struct branch_foreach_s payload;
+    payload.tuple = PyTuple_New(4);
+    if (payload.tuple == NULL)
+        return NULL;
+
+    payload.pos = 0;
+    err = git_branch_foreach(self->repo, list_flags, branch_foreach_cb, &payload);
+    if (err != GIT_OK)
+        return Error_set(err);
+
+    /* 3- Trim the tuple */
+    err = _PyTuple_Resize(&payload.tuple, payload.pos);
+    if (err)
+        return Error_set(err);
+
+    return payload.tuple;
 }
 
 
@@ -1310,7 +1438,7 @@ PyMethodDef Repository_methods[] = {
     METHOD(Repository, write, METH_VARARGS),
     METHOD(Repository, create_reference_direct, METH_VARARGS),
     METHOD(Repository, create_reference_symbolic, METH_VARARGS),
-    METHOD(Repository, listall_references, METH_VARARGS),
+    METHOD(Repository, listall_references, METH_NOARGS),
     METHOD(Repository, lookup_reference, METH_O),
     METHOD(Repository, revparse_single, METH_O),
     METHOD(Repository, status, METH_NOARGS),
@@ -1323,6 +1451,9 @@ PyMethodDef Repository_methods[] = {
     METHOD(Repository, create_note, METH_VARARGS),
     METHOD(Repository, lookup_note, METH_VARARGS),
     METHOD(Repository, git_object_lookup_prefix, METH_O),
+    METHOD(Repository, lookup_branch, METH_VARARGS),
+    METHOD(Repository, listall_branches, METH_VARARGS),
+    METHOD(Repository, create_branch, METH_VARARGS),
     {NULL}
 };
 
