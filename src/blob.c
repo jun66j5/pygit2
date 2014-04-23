@@ -41,12 +41,24 @@ Blob_size__get__(Blob *self)
 }
 
 
+PyDoc_STRVAR(Blob_is_binary__doc__, "True if binary data, False if not.");
+
+PyObject *
+Blob_is_binary__get__(Blob *self)
+{
+    if (git_blob_is_binary(self->blob))
+        Py_RETURN_TRUE;
+    Py_RETURN_FALSE;
+}
+
+
 PyDoc_STRVAR(Blob_data__doc__,
   "The contents of the blob, a bytes string. This is the same as\n"
   "Blob.read_raw()");
 
 PyGetSetDef Blob_getseters[] = {
     GETTER(Blob, size),
+    GETTER(Blob, is_binary),
     {"data", (getter)Object_read_raw, NULL, Blob_data__doc__, NULL},
     {NULL}
 };

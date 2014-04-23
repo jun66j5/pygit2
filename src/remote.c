@@ -86,7 +86,7 @@ Remote_name__set__(Remote *self, PyObject* py_name)
         free(name);
 
         if (err == GIT_OK)
-          return 0;
+            return 0;
 
         Error_set(err);
     }
@@ -116,7 +116,7 @@ Remote_url__set__(Remote *self, PyObject* py_url)
         free(url);
 
         if (err == GIT_OK)
-          return 0;
+            return 0;
 
         Error_set(err);
     }
@@ -179,7 +179,7 @@ Remote_fetch(Remote *self, PyObject *args)
 
     err = git_remote_connect(self->remote, GIT_DIRECTION_FETCH);
     if (err == GIT_OK) {
-        err = git_remote_download(self->remote, NULL, NULL);
+        err = git_remote_download(self->remote);
         if (err == GIT_OK) {
             stats = git_remote_stats(self->remote);
             py_stats = Py_BuildValue(

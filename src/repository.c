@@ -37,6 +37,7 @@
 #include "repository.h"
 #include "remote.h"
 #include "branch.h"
+#include "blame.h"
 #include <git2/odb_backend.h>
 
 extern PyObject *GitError;
@@ -208,14 +209,14 @@ Repository_head_is_detached__get__(Repository *self)
 }
 
 
-PyDoc_STRVAR(Repository_head_is_orphaned__doc__,
-  "An orphan branch is one named from HEAD but which doesn't exist in the\n"
+PyDoc_STRVAR(Repository_head_is_unborn__doc__,
+  "An unborn branch is one named from HEAD but which doesn't exist in the\n"
   "refs namespace, because it doesn't have any commit to point to.");
 
 PyObject *
-Repository_head_is_orphaned__get__(Repository *self)
+Repository_head_is_unborn__get__(Repository *self)
 {
-    if (git_repository_head_orphan(self->repo) > 0)
+    if (git_repository_head_unborn(self->repo) > 0)
         Py_RETURN_TRUE;
 
     Py_RETURN_FALSE;
@@ -432,9 +433,17 @@ Repository_write(Repository *self, PyObject *args)
     if (err < 0)
         return Error_set(err);
 
-    stream->write(stream, buffer, buflen);
-    err = stream->finalize_write(&oid, stream);
-    stream->free(stream);
+    err = git_odb_stream_write(stream, buffer, buflen);
+    if (err) {
+        git_odb_stream_free(stream);
+        return Error_set(err);
+    }
+
+    err = git_odb_stream_finalize_write(&oid, stream);
+    git_odb_stream_free(stream);
+    if (err)
+        return Error_set(err);
+
     return git_oid_to_python(&oid);
 }
 
@@ -879,9 +888,9 @@ PyObject* Repository_create_branch(Repository *self, PyObject *args)
 
 
 PyDoc_STRVAR(Repository_listall_references__doc__,
-  "listall_references() -> (str, ...)\n"
+  "listall_references() -> [str, ...]\n"
   "\n"
-  "Return a tuple with all the references in the repository.");
+  "Return a list with all the references in the repository.");
 
 PyObject *
 Repository_listall_references(Repository *self, PyObject *args)
@@ -897,18 +906,18 @@ Repository_listall_references(Repository *self, PyObject *args)
         return Error_set(err);
 
     /* Create a new PyTuple */
-    py_result = PyTuple_New(c_result.count);
+    py_result = PyList_New(c_result.count);
     if (py_result == NULL)
         goto out;
 
     /* Fill it */
     for (index=0; index < c_result.count; index++) {
-        py_string = to_path((c_result.strings)[index]);
+        py_string = to_path(c_result.strings[index]);
         if (py_string == NULL) {
             Py_CLEAR(py_result);
             goto out;
         }
-        PyTuple_SET_ITEM(py_result, index, py_string);
+        PyList_SET_ITEM(py_result, index, py_string);
     }
 
 out:
@@ -918,73 +927,60 @@ out:
 
 
 PyDoc_STRVAR(Repository_listall_branches__doc__,
-  "listall_branches([flags]) -> (str, ...)\n"
+  "listall_branches([flags]) -> [str, ...]\n"
   "\n"
   "Return a tuple with all the branches in the repository.");
-
-struct branch_foreach_s {
-    PyObject *tuple;
-    Py_ssize_t pos;
-};
-
-int
-branch_foreach_cb(const char *branch_name, git_branch_t branch_type, void *payload)
-{
-    /* This is the callback that will be called in git_branch_foreach. It
-     * will be called for every branch.
-     * payload is a struct branch_foreach_s.
-     */
-    int err;
-    struct branch_foreach_s *payload_s = (struct branch_foreach_s *)payload;
-
-    if (PyTuple_Size(payload_s->tuple) <= payload_s->pos)
-    {
-        err = _PyTuple_Resize(&(payload_s->tuple), payload_s->pos * 2);
-        if (err) {
-            Py_CLEAR(payload_s->tuple);
-            return GIT_ERROR;
-        }
-    }
-
-    PyObject *py_branch_name = to_path(branch_name);
-    if (py_branch_name == NULL) {
-        Py_CLEAR(payload_s->tuple);
-        return GIT_ERROR;
-    }
-
-    PyTuple_SET_ITEM(payload_s->tuple, payload_s->pos++, py_branch_name);
-
-    return GIT_OK;
-}
-
 
 PyObject *
 Repository_listall_branches(Repository *self, PyObject *args)
 {
-    unsigned int list_flags = GIT_BRANCH_LOCAL;
+    git_branch_t list_flags = GIT_BRANCH_LOCAL;
+    git_branch_iterator *iter;
+    git_reference *ref = NULL;
     int err;
+    git_branch_t type;
+    PyObject *list;
 
     /* 1- Get list_flags */
     if (!PyArg_ParseTuple(args, "|I", &list_flags))
         return NULL;
 
-    /* 2- Get the C result */
-    struct branch_foreach_s payload;
-    payload.tuple = PyTuple_New(4);
-    if (payload.tuple == NULL)
+    list = PyList_New(0);
+    if (list == NULL)
         return NULL;
 
-    payload.pos = 0;
-    err = git_branch_foreach(self->repo, list_flags, branch_foreach_cb, &payload);
-    if (err != GIT_OK)
+    if ((err = git_branch_iterator_new(&iter, self->repo, list_flags)) < 0)
         return Error_set(err);
 
-    /* 3- Trim the tuple */
-    err = _PyTuple_Resize(&payload.tuple, payload.pos);
-    if (err)
-        return Error_set(err);
+    while ((err = git_branch_next(&ref, &type, iter)) == 0) {
+        PyObject *py_branch_name = to_path(git_reference_shorthand(ref));
+        git_reference_free(ref);
 
-    return payload.tuple;
+        if (py_branch_name == NULL)
+            goto error;
+
+        err = PyList_Append(list, py_branch_name);
+        Py_DECREF(py_branch_name);
+
+        if (err < 0)
+            goto error;
+    }
+
+    git_branch_iterator_free(iter);
+    if (err == GIT_ITEROVER)
+        err = 0;
+
+    if (err < 0) {
+        Py_CLEAR(list);
+        return Error_set(err);
+    }
+
+    return list;
+
+error:
+    git_branch_iterator_free(iter);
+    Py_CLEAR(list);
+    return NULL;
 }
 
 
@@ -1098,33 +1094,54 @@ PyDoc_STRVAR(Repository_status__doc__,
   "Reads the status of the repository and returns a dictionary with file\n"
   "paths as keys and status flags as values. See pygit2.GIT_STATUS_*.");
 
-int
-read_status_cb(const char *path, unsigned int status_flags, void *payload)
-{
-    /* This is the callback that will be called in git_status_foreach. It
-     * will be called for every path.*/
-    PyObject *flags;
-    int err;
-
-    flags = PyLong_FromLong((long) status_flags);
-    err = PyDict_SetItemString(payload, path, flags);
-    Py_CLEAR(flags);
-
-    if (err < 0)
-        return GIT_ERROR;
-
-    return GIT_OK;
-}
-
 PyObject *
 Repository_status(Repository *self, PyObject *args)
 {
-    PyObject *payload_dict;
+    PyObject *dict;
+    int err;
+    size_t len, i;
+    git_status_list *list;
 
-    payload_dict = PyDict_New();
-    git_status_foreach(self->repo, read_status_cb, payload_dict);
+    dict = PyDict_New();
+    if (dict == NULL)
+        return NULL;
 
-    return payload_dict;
+    err = git_status_list_new(&list, self->repo, NULL);
+    if (err < 0)
+        return Error_set(err);
+
+    len = git_status_list_entrycount(list);
+    for (i = 0; i < len; i++) {
+        const git_status_entry *entry;
+        const char *path;
+        PyObject *status;
+
+        entry = git_status_byindex(list, i);
+        if (entry == NULL)
+            goto error;
+
+        /* We need to choose one of the strings */
+        if (entry->head_to_index)
+            path = entry->head_to_index->old_file.path;
+        else
+            path = entry->index_to_workdir->old_file.path;
+        status = PyLong_FromLong((long) entry->status);
+
+        err = PyDict_SetItemString(dict, path, status);
+        Py_CLEAR(status);
+
+        if (err < 0)
+            goto error;
+
+    }
+
+    git_status_list_free(list);
+    return dict;
+
+error:
+    git_status_list_free(list);
+    Py_CLEAR(dict);
+    return NULL;
 }
 
 
@@ -1425,6 +1442,71 @@ Repository_lookup_note(Repository *self, PyObject* args)
     return (PyObject*) wrap_note(self, &annotated_id, ref);
 }
 
+PyDoc_STRVAR(Repository_blame__doc__,
+  "blame(path, [flags, min_match_characters, newest_commit, oldest_commit,\n"
+  "             min_line, max_line]) -> blame\n"
+  "\n"
+  "Get the blame for a single file.\n"
+  "\n"
+  "Arguments:\n"
+  "\n"
+  "path\n"
+  "    A path to file to consider.\n"
+  "flags\n"
+  "    A GIT_BLAME_* constant.\n"
+  "min_match_characters\n"
+  "    The number of alphanum chars that must be detected as moving/copying\n"
+  "    within a file for it to associate those lines with the parent commit.\n"
+  "newest_commit\n"
+  "    The id of the newest commit to consider.\n"
+  "oldest_commit\n"
+  "    The id of the oldest commit to consider.\n"
+  "min_line\n"
+  "    The first line in the file to blame.\n"
+  "max_line\n"
+  "    The last line in the file to blame.\n"
+  "\n"
+  "Examples::\n"
+  "\n"
+  "    repo.blame('foo.c', flags=GIT_BLAME_TRACK_COPIES_SAME_FILE)");
+
+PyObject* Repository_blame(Repository *self, PyObject *args, PyObject *kwds)
+{
+    git_blame_options opts = GIT_BLAME_OPTIONS_INIT;
+    git_blame *blame;
+    char *path;
+    PyObject *value1 = NULL;
+    PyObject *value2 = NULL;
+    int err;
+    char *keywords[] = {"flags", "min_match_characters", "newest_commit",
+                        "oldest_commit", "min_line", "max_line", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|IHOOII", keywords,
+                                     &path, &opts.flags,
+                                     &opts.min_match_characters,
+                                     &value1, &value2,
+                                     &opts.min_line, &opts.max_line))
+        return NULL;
+
+    if (value1) {
+        err = py_oid_to_git_oid_expand(self->repo, value1, &opts.newest_commit);
+        if (err < 0)
+            return NULL;
+    }
+    if (value2) {
+        err = py_oid_to_git_oid_expand(self->repo, value2, &opts.oldest_commit);
+        if (err < 0)
+            return NULL;
+    }
+
+    err = git_blame_file(&blame, self->repo, path, NULL);
+    if (err < 0)
+        return Error_set(err);
+
+    return wrap_blame(blame, self);
+}
+
+
 PyMethodDef Repository_methods[] = {
     METHOD(Repository, create_blob, METH_VARARGS),
     METHOD(Repository, create_blob_fromworkdir, METH_VARARGS),
@@ -1454,6 +1536,7 @@ PyMethodDef Repository_methods[] = {
     METHOD(Repository, lookup_branch, METH_VARARGS),
     METHOD(Repository, listall_branches, METH_VARARGS),
     METHOD(Repository, create_branch, METH_VARARGS),
+    METHOD(Repository, blame, METH_VARARGS | METH_KEYWORDS),
     {NULL}
 };
 
@@ -1462,7 +1545,7 @@ PyGetSetDef Repository_getseters[] = {
     GETTER(Repository, path),
     GETSET(Repository, head),
     GETTER(Repository, head_is_detached),
-    GETTER(Repository, head_is_orphaned),
+    GETTER(Repository, head_is_unborn),
     GETTER(Repository, is_empty),
     GETTER(Repository, is_bare),
     GETTER(Repository, config),
