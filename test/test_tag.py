@@ -90,6 +90,11 @@ class TagTest(utils.BareRepoTestCase):
         self.assertRaises(exctype, setattr, tag, 'tagger', tagger)
         self.assertRaises(exctype, setattr, tag, 'message', message)
 
+    def test_get_object(self):
+        repo = self.repo
+        tag = repo[TAG_SHA]
+        self.assertEqual(repo[tag.target].oid, tag.get_object().oid)
+
 
 if __name__ == '__main__':
     unittest.main()
