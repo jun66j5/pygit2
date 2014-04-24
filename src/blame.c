@@ -138,7 +138,11 @@ PyMemberDef BlameHunk_members[] = {
     MEMBER(BlameHunk, orig_commit_id, T_STRING, "oid where hunk was found."),
     MEMBER(BlameHunk, orig_path, T_STRING, "Origin path."),
     MEMBER(BlameHunk, orig_start_line_number, T_UINT, "Origin start line no."),
+#ifdef T_BOOL
     MEMBER(BlameHunk, boundary, T_BOOL, "Tracked to a boundary commit."),
+#else
+    MEMBER(BlameHunk, boundary, T_BYTE, "Tracked to a boundary commit."),
+#endif
     {NULL}
 };
 

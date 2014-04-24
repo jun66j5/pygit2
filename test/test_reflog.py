@@ -27,11 +27,8 @@
 
 """Tests for reference log."""
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 from pygit2 import Signature
-from . import utils
+utils = __import__('utils', globals(), locals(), [])
 
 
 class ReflogTest(utils.RepoTestCase):

@@ -27,14 +27,12 @@
 
 """Tests for Blame objects."""
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
 import unittest
 import pygit2
 from pygit2 import Signature
 from pygit2 import GIT_DIFF_INCLUDE_UNMODIFIED
 from pygit2 import GIT_DIFF_IGNORE_WHITESPACE, GIT_DIFF_IGNORE_WHITESPACE_EOL
-from . import utils
+utils = __import__('utils', globals(), locals(), [])
 from itertools import chain
 from datetime import datetime
 
