@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2013 The pygit2 contributors
+ * Copyright 2010-2014 The pygit2 contributors
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, version 2,
@@ -139,6 +139,8 @@ to_bytes(const char * value)
 }
 
 char * py_str_to_c_str(PyObject *value, const char *encoding);
+const char *py_str_borrow_c_str(PyObject **tvaue, PyObject *value, const char *encoding);
+
 
 #define py_path_to_c_str(py_path) \
         py_str_to_c_str(py_path, Py_FileSystemDefaultEncoding)
@@ -163,6 +165,9 @@ char * py_str_to_c_str(PyObject *value, const char *encoding);
 
 #define MEMBER(type, attr, attr_type, docstr)\
   {#attr, attr_type, offsetof(type, attr), 0, PyDoc_STR(docstr)}
+
+#define RMEMBER(type, attr, attr_type, docstr)\
+  {#attr, attr_type, offsetof(type, attr), READONLY, PyDoc_STR(docstr)}
 
 
 /* Helpers for memory allocation */

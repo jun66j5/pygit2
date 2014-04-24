@@ -1,6 +1,6 @@
 # -*- coding: UTF-8 -*-
 #
-# Copyright 2010-2013 The pygit2 contributors
+# Copyright 2010-2014 The pygit2 contributors
 #
 # This file is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License, version 2,
@@ -32,6 +32,12 @@ import unittest
 import pygit2
 utils = __import__('utils', globals(), locals(), [])
 
+# pypy raises TypeError on writing to read-only, so we need to check
+# and change the test accordingly
+try:
+    import __pypy__
+except ImportError:
+    __pypy__ = None
 
 TAG_SHA = '3d2962987c695a29f1f80b6c3aa4ec046ef44369'
 
@@ -81,19 +87,19 @@ class TagTest(utils.BareRepoTestCase):
         message = 'Tag a blob.\n'
         tagger = ('John Doe', 'jdoe@example.com', 12347)
 
-        import sys
-        exctype = (AttributeError, TypeError)[sys.version_info[:2] < (2, 5)]
-
         tag = self.repo[TAG_SHA]
-        self.assertRaises(exctype, setattr, tag, 'name', name)
-        self.assertRaises(exctype, setattr, tag, 'target', target)
-        self.assertRaises(exctype, setattr, tag, 'tagger', tagger)
-        self.assertRaises(exctype, setattr, tag, 'message', message)
+        import sys
+        error_type = (AttributeError, TypeError)[__pypy__ or
+                                                 sys.version_info[:2] < (2, 5)]
+        self.assertRaises(error_type, setattr, tag, 'name', name)
+        self.assertRaises(error_type, setattr, tag, 'target', target)
+        self.assertRaises(error_type, setattr, tag, 'tagger', tagger)
+        self.assertRaises(error_type, setattr, tag, 'message', message)
 
     def test_get_object(self):
         repo = self.repo
         tag = repo[TAG_SHA]
-        self.assertEqual(repo[tag.target].oid, tag.get_object().oid)
+        self.assertEqual(repo[tag.target].id, tag.get_object().id)
 
 
 if __name__ == '__main__':
