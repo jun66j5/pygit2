@@ -183,7 +183,7 @@ Config_getitem(Config *self, PyObject *py_key)
         return NULL;
 
     err = git_config_get_string(&value_str, self->config, key);
-    Py_CLEAR(tmp);
+    Py_DECREF(tmp);
     if (err < 0)
         goto cleanup;
 
