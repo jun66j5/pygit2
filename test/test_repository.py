@@ -245,8 +245,11 @@ class RepositoryTest_II(utils.RepoTestCase):
 
     def test_reset_hard(self):
         ref = "5ebeeebb320790caf276b9fc8b24546d63316533"
-        with open(os.path.join(self.repo.workdir, "hello.txt")) as f:
+        f = open(os.path.join(self.repo.workdir, "hello.txt"))
+        try:
             lines = f.readlines()
+        finally:
+            f.close()
         self.assertTrue("hola mundo\n" in lines)
         self.assertTrue("bonjour le monde\n" in lines)
 
@@ -255,16 +258,22 @@ class RepositoryTest_II(utils.RepoTestCase):
             pygit2.GIT_RESET_HARD)
         self.assertEqual(self.repo.head.target.hex, ref)
 
-        with open(os.path.join(self.repo.workdir, "hello.txt")) as f:
+        f = open(os.path.join(self.repo.workdir, "hello.txt"))
+        try:
             lines = f.readlines()
+        finally:
+            f.close()
         #Hard reset will reset the working copy too
         self.assertFalse("hola mundo\n" in lines)
         self.assertFalse("bonjour le monde\n" in lines)
 
     def test_reset_soft(self):
         ref = "5ebeeebb320790caf276b9fc8b24546d63316533"
-        with open(os.path.join(self.repo.workdir, "hello.txt")) as f:
+        f = open(os.path.join(self.repo.workdir, "hello.txt"))
+        try:
             lines = f.readlines()
+        finally:
+            f.close()
         self.assertTrue("hola mundo\n" in lines)
         self.assertTrue("bonjour le monde\n" in lines)
 
@@ -272,8 +281,11 @@ class RepositoryTest_II(utils.RepoTestCase):
             ref,
             pygit2.GIT_RESET_SOFT)
         self.assertEqual(self.repo.head.target.hex, ref)
-        with open(os.path.join(self.repo.workdir, "hello.txt")) as f:
+        f = open(os.path.join(self.repo.workdir, "hello.txt"))
+        try:
             lines = f.readlines()
+        finally:
+            f.close()
         #Soft reset will not reset the working copy
         self.assertTrue("hola mundo\n" in lines)
         self.assertTrue("bonjour le monde\n" in lines)
@@ -284,8 +296,11 @@ class RepositoryTest_II(utils.RepoTestCase):
 
     def test_reset_mixed(self):
         ref = "5ebeeebb320790caf276b9fc8b24546d63316533"
-        with open(os.path.join(self.repo.workdir, "hello.txt")) as f:
+        f = open(os.path.join(self.repo.workdir, "hello.txt"))
+        try:
             lines = f.readlines()
+        finally:
+            f.close()
         self.assertTrue("hola mundo\n" in lines)
         self.assertTrue("bonjour le monde\n" in lines)
 
@@ -295,8 +310,11 @@ class RepositoryTest_II(utils.RepoTestCase):
 
         self.assertEqual(self.repo.head.target.hex, ref)
 
-        with open(os.path.join(self.repo.workdir, "hello.txt")) as f:
+        f = open(os.path.join(self.repo.workdir, "hello.txt"))
+        try:
             lines = f.readlines()
+        finally:
+            f.close()
         #mixed reset will not reset the working copy
         self.assertTrue("hola mundo\n" in lines)
         self.assertTrue("bonjour le monde\n" in lines)
@@ -371,8 +389,11 @@ class RepositoryTest_III(utils.RepoTestCaseForMerging):
     def test_merge_already_something_in_index(self):
         branch_head_hex = '03490f16b15a09913edb3a067a3dc67fbb8d41f1'
         branch_oid = self.repo.get(branch_head_hex).oid
-        with open(os.path.join(self.repo.workdir, 'inindex.txt'), 'w') as f:
+        f = open(os.path.join(self.repo.workdir, 'inindex.txt'), 'w')
+        try:
             f.write('new content')
+        finally:
+            f.close()
         self.repo.index.add('inindex.txt')
         self.assertRaises(pygit2.GitError, self.repo.merge, branch_oid)
 
