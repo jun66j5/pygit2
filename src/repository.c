@@ -105,7 +105,7 @@ Repository_dealloc(Repository *self)
     Py_CLEAR(self->index);
     Py_CLEAR(self->config);
     git_repository_free(self->repo);
-    PyObject_GC_Del(self);
+    Py_TYPE(self)->tp_free(self);
 }
 
 int
@@ -139,6 +139,7 @@ Repository_as_iter(Repository *self)
     git_odb *odb;
     int err;
     PyObject *accum = PyList_New(0);
+    PyObject *ret;
 
     err = git_repository_odb(&odb, self->repo);
     if (err < 0)
@@ -151,7 +152,10 @@ Repository_as_iter(Repository *self)
     if (err < 0)
         return Error_set(err);
 
-    return PyObject_GetIter(accum);
+    ret = PyObject_GetIter(accum);
+    Py_DECREF(accum);
+
+    return ret;
 }
 
 
@@ -333,7 +337,7 @@ Repository_revparse_single(Repository *self, PyObject *py_spec)
 
     if (err < 0) {
         PyObject *err_obj = Error_set_str(err, c_spec);
-	Py_DECREF(tspec);
+        Py_DECREF(tspec);
         return err_obj;
     }
     Py_DECREF(tspec);
@@ -628,13 +632,13 @@ Repository_merge(Repository *self, PyObject *py_oid)
 }
 
 PyDoc_STRVAR(Repository_walk__doc__,
-  "walk(oid, sort_mode) -> iterator\n"
+  "walk(oid[, sort_mode]) -> iterator\n"
   "\n"
   "Generator that traverses the history starting from the given commit.\n"
   "The following types of sorting could be used to control traversing\n"
   "direction:\n"
   "\n"
-  "* GIT_SORT_NONE. This is the default sorting for new walkers\n"
+  "* GIT_SORT_NONE. This is the default sorting for new walkers.\n"
   "  Sort the repository contents in no particular ordering\n"
   "* GIT_SORT_TOPOLOGICAL. Sort the repository contents in topological order\n"
   "  (parents before children); this sorting mode can be combined with\n"
@@ -658,13 +662,13 @@ PyObject *
 Repository_walk(Repository *self, PyObject *args)
 {
     PyObject *value;
-    unsigned int sort;
+    unsigned int sort = GIT_SORT_NONE;
     int err;
     git_oid oid;
     git_revwalk *walk;
     Walker *py_walker;
 
-    if (!PyArg_ParseTuple(args, "OI", &value, &sort))
+    if (!PyArg_ParseTuple(args, "O|I", &value, &sort))
         return NULL;
 
     err = git_revwalk_new(&walk, self->repo);
@@ -809,11 +813,11 @@ Repository_create_commit(Repository *self, PyObject *args)
 
     len = py_oid_to_git_oid(py_oid, &oid);
     if (len == 0)
-        goto out;
+        return NULL;
 
     message = py_str_borrow_c_str(&tmessage, py_message, encoding);
     if (message == NULL)
-        goto out;
+        return NULL;
 
     err = git_tree_lookup_prefix(&tree, self->repo, &oid, len);
     if (err < 0) {
@@ -1053,7 +1057,7 @@ Repository_lookup_reference(Repository *self, PyObject *py_name)
     err = git_reference_lookup(&c_reference, self->repo, c_name);
     if (err < 0) {
         PyObject *err_obj = Error_set_str(err, c_name);
-	free(c_name);
+        free(c_name);
         return err_obj;
     }
     free(c_name);
@@ -1347,7 +1351,7 @@ Repository_default_signature__get__(Repository *self)
     if ((err = git_signature_default(&sig, self->repo)) < 0)
         return Error_set(err);
 
-    return build_signature((Object*) self, sig, "utf-8");
+    return build_signature(NULL, sig, "utf-8");
 }
 
 PyDoc_STRVAR(Repository_checkout_head__doc__,

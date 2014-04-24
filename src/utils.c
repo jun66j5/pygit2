@@ -83,3 +83,162 @@ py_str_borrow_c_str(PyObject **tvalue, PyObject *value, const char *encoding)
                  Py_TYPE(value)->tp_name);
     return NULL;
 }
+
+/**
+ * Converts the (struct) git_strarray to a Python list
+ */
+PyObject *
+get_pylist_from_git_strarray(git_strarray *strarray)
+{
+    int index;
+    PyObject *new_list;
+
+    new_list = PyList_New(strarray->count);
+    if (new_list == NULL)
+        return NULL;
+
+    for (index = 0; index < strarray->count; index++)
+        PyList_SET_ITEM(new_list, index,
+                        to_unicode(strarray->strings[index], NULL, NULL));
+
+    return new_list;
+}
+
+/**
+ * Converts the Python list to struct git_strarray
+ * returns -1 if conversion failed
+ */
+int
+get_strarraygit_from_pylist(git_strarray *array, PyObject *pylist)
+{
+    Py_ssize_t index, n;
+    PyObject *item;
+    void *ptr;
+    char *str;
+
+    if (!PyList_Check(pylist)) {
+        PyErr_SetString(PyExc_TypeError, "Value must be a list");
+        return -1;
+    }
+
+    n = PyList_Size(pylist);
+
+    /* allocate new git_strarray */
+    ptr = calloc(n, sizeof(char *));
+    if (!ptr) {
+        PyErr_SetNone(PyExc_MemoryError);
+        return -1;
+    }
+
+    array->strings = ptr;
+    array->count = n;
+
+    for (index = 0; index < n; index++) {
+        item = PyList_GetItem(pylist, index);
+        str = py_str_to_c_str(item, NULL);
+        if (!str)
+            goto on_error;
+
+        array->strings[index] = str;
+    }
+
+    return 0;
+
+on_error:
+    n = index;
+    for (index = 0; index < n; index++) {
+        free(array->strings[index]);
+    }
+    free(array->strings);
+
+    return -1;
+}
+
+static int
+py_cred_to_git_cred(git_cred **out, PyObject *py_cred, unsigned int allowed)
+{
+    PyObject *py_type, *py_tuple;
+    long type;
+    int err = -1;
+
+    py_type = PyObject_GetAttrString(py_cred, "credential_type");
+    py_tuple = PyObject_GetAttrString(py_cred, "credential_tuple");
+
+    if (!py_type || !py_tuple) {
+        printf("py_type %p, py_tuple %p\n", py_type, py_tuple);
+        PyErr_SetString(PyExc_TypeError, "credential doesn't implement the interface");
+        goto cleanup;
+    }
+
+    if (!PyLong_Check(py_type)) {
+        PyErr_SetString(PyExc_TypeError, "credential type is not a long");
+        goto cleanup;
+    }
+
+    type = PyLong_AsLong(py_type);
+
+    /* Sanity check, make sure we're given credentials we can use */
+    if (!(allowed & type)) {
+        PyErr_SetString(PyExc_TypeError, "invalid credential type");
+        goto cleanup;
+    }
+
+    switch (type) {
+    case GIT_CREDTYPE_USERPASS_PLAINTEXT:
+    {
+        const char *username, *password;
+
+        if (!PyArg_ParseTuple(py_tuple, "ss", &username, &password))
+            goto cleanup;
+
+        err = git_cred_userpass_plaintext_new(out, username, password);
+        break;
+    }
+    case GIT_CREDTYPE_SSH_KEY:
+    {
+        const char *username, *pubkey, *privkey, *passphrase;
+
+        if (!PyArg_ParseTuple(py_tuple, "ssss", &username, &pubkey, &privkey, &passphrase))
+            goto cleanup;
+
+        err = git_cred_ssh_key_new(out, username, pubkey, privkey, passphrase);
+        break;
+    }
+    default:
+        PyErr_SetString(PyExc_TypeError, "unsupported credential type");
+        break;
+    }
+
+cleanup:
+    Py_XDECREF(py_type);
+    Py_XDECREF(py_tuple);
+
+    return err;
+}
+
+int
+callable_to_credentials(git_cred **out, const char *url, const char *username_from_url, unsigned int allowed_types, PyObject *credentials)
+{
+    int err;
+    PyObject *py_cred = NULL, *arglist = NULL;
+
+    if (credentials == NULL || credentials == Py_None)
+        return 0;
+
+    if (!PyCallable_Check(credentials)) {
+        PyErr_SetString(PyExc_TypeError, "credentials callback is not callable");
+        return -1;
+    }
+
+    arglist = Py_BuildValue("(szI)", url, username_from_url, allowed_types);
+    py_cred = PyObject_CallObject(credentials, arglist);
+    Py_DECREF(arglist);
+
+    if (!py_cred)
+        return -1;
+
+    err = py_cred_to_git_cred(out, py_cred, allowed_types);
+    Py_DECREF(py_cred);
+
+    return err;
+}

@@ -164,6 +164,7 @@ class RepositoryTest(utils.BareRepoTestCase):
         finally:
             fh.close()
         hashed_sha1 = hashfile(tempfile_path)
+        os.unlink(tempfile_path)
         written_sha1 = self.repo.create_blob(data)
         self.assertEqual(hashed_sha1, written_sha1)
 
@@ -486,6 +487,13 @@ class CloneRepositoryTest(utils.NoRepoTestCase):
         self.assertFalse(repo.is_empty)
         self.assertEqual(repo.remotes[0].name, "custom_remote")
 
+    def test_clone_with_credentials(self):
+        credentials = pygit2.UserPass("libgit2", "libgit2")
+        repo = clone_repository(
+            "https://bitbucket.org/libgit2/testgitrepository.git",
+            self._temp_dir, credentials=credentials)
+
+        self.assertFalse(repo.is_empty)
 
     # FIXME The tests below are commented because they are broken:
     #

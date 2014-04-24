@@ -92,7 +92,7 @@ class TemporaryRepository(object):
     def __init__(self, repo_spec):
         self.repo_spec = repo_spec
 
-    def __enter__(self):
+    def enter(self):
         container, name = self.repo_spec
         repo_path = os.path.join(os.path.dirname(__file__), 'data', name)
         self.temp_dir = tempfile.mkdtemp()
@@ -105,7 +105,12 @@ class TemporaryRepository(object):
             shutil.copytree(repo_path, temp_repo_path)
         return temp_repo_path
 
+    __enter__ = enter
+
     def __exit__(self, exc_type, exc_value, traceback):
+        self.exit()
+
+    def exit(self):
         rmtree(self.temp_dir)
 
 

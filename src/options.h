@@ -25,24 +25,27 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifndef INCLUDE_pygit2_index_h
-#define INCLUDE_pygit2_index_h
+#ifndef INCLUDE_pygit2_blame_h
+#define INCLUDE_pygit2_blame_h
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <git2.h>
+#include "types.h"
 
-PyObject* Index_add(Index *self, PyObject *args);
-PyObject* Index_add_all(Index *self, PyObject *pylist);
-PyObject* Index_clear(Index *self);
-PyObject* Index_find(Index *self, PyObject *py_path);
-PyObject* Index_read(Index *self, PyObject *args);
-PyObject* Index_write(Index *self);
-PyObject* Index_iter(Index *self);
-PyObject* Index_getitem(Index *self, PyObject *value);
-PyObject* Index_read_tree(Index *self, PyObject *value);
-PyObject* Index_write_tree(Index *self, PyObject *args);
-Py_ssize_t Index_len(Index *self);
-int Index_setitem(Index *self, PyObject *key, PyObject *value);
+PyDoc_STRVAR(option__doc__,
+  "Get or set a libgit2 option\n"
+  "Arguments:\n"
+  "  (GIT_OPT_GET_SEARCH_PATH, level)\n"
+  "  Get the config search path for the given level\n"
+  "  (GIT_OPT_SET_SEARCH_PATH, level, path)\n"
+  "  Set the config search path for the given level\n"
+  "  (GIT_OPT_GET_MWINDOW_SIZE)\n"
+  "  Get the maximum mmap window size\n"
+  "  (GIT_OPT_SET_MWINDOW_SIZE, size)\n"
+  "  Set the maximum mmap window size\n");
+
+
+PyObject *option(PyObject *self, PyObject *args);
 
 #endif
