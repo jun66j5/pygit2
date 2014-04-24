@@ -38,6 +38,7 @@
 #include "remote.h"
 #include "branch.h"
 #include "blame.h"
+#include "mergeresult.h"
 #include <git2/odb_backend.h>
 
 extern PyObject *GitError;
@@ -46,6 +47,7 @@ extern PyTypeObject IndexType;
 extern PyTypeObject WalkerType;
 extern PyTypeObject SignatureType;
 extern PyTypeObject ObjectType;
+extern PyTypeObject OidType;
 extern PyTypeObject CommitType;
 extern PyTypeObject TreeType;
 extern PyTypeObject TreeBuilderType;
@@ -538,8 +540,7 @@ Repository_config__get__(Repository *self)
 
         py_config->config = config;
         self->config = (PyObject*)py_config;
-        // We need 2 refs here.
-        // One is returned, one is kept internally.
+        /* We need 2 refs here. One is returned, one is kept internally. */
         Py_INCREF(self->config);
     } else {
         Py_INCREF(self->config);
@@ -579,6 +580,48 @@ Repository_merge_base(Repository *self, PyObject *args)
         return Error_set(err);
 
     return git_oid_to_python(&oid);
+}
+
+PyDoc_STRVAR(Repository_merge__doc__,
+  "merge(oid) -> MergeResult\n"
+  "\n"
+  "Merges the given oid and returns the MergeResult.\n"
+  "\n"
+  "If the merge is fastforward the MergeResult will contain the new\n"
+  "fastforward oid.\n"
+  "If the branch is uptodate, nothing to merge, the MergeResult will\n"
+  "have the fastforward oid as None.\n"
+  "If the merge is not fastforward the MergeResult will have the status\n"
+  "produced by the merge, even if there are conflicts.");
+
+PyObject *
+Repository_merge(Repository *self, PyObject *py_oid)
+{
+    git_merge_result *merge_result;
+    git_merge_head *oid_merge_head;
+    git_oid oid;
+    const git_merge_opts default_opts = GIT_MERGE_OPTS_INIT;
+    int err;
+    size_t len;
+    PyObject *py_merge_result;
+
+    len = py_oid_to_git_oid(py_oid, &oid);
+    if (len == 0)
+        return NULL;
+
+    err = git_merge_head_from_oid(&oid_merge_head, self->repo, &oid);
+    if (err < 0)
+        return Error_set(err);
+
+    err = git_merge(&merge_result, self->repo,
+                    (const git_merge_head **)&oid_merge_head, 1,
+                    &default_opts);
+    git_merge_head_free(oid_merge_head);
+    if (err < 0)
+        return Error_set(err);
+
+    py_merge_result = git_merge_result_to_python(merge_result);
+    return py_merge_result;
 }
 
 PyDoc_STRVAR(Repository_walk__doc__,
@@ -869,7 +912,8 @@ PyDoc_STRVAR(Repository_create_branch__doc__,
   "\n"
   "    repo.create_branch('foo', repo.head.hex, force=False)");
 
-PyObject* Repository_create_branch(Repository *self, PyObject *args)
+PyObject *
+Repository_create_branch(Repository *self, PyObject *args)
 {
     Commit *py_commit;
     git_reference *c_reference;
@@ -1095,7 +1139,7 @@ PyDoc_STRVAR(Repository_status__doc__,
   "paths as keys and status flags as values. See pygit2.GIT_STATUS_*.");
 
 PyObject *
-Repository_status(Repository *self, PyObject *args)
+Repository_status(Repository *self)
 {
     PyObject *dict;
     int err;
@@ -1470,7 +1514,8 @@ PyDoc_STRVAR(Repository_blame__doc__,
   "\n"
   "    repo.blame('foo.c', flags=GIT_BLAME_TRACK_COPIES_SAME_FILE)");
 
-PyObject* Repository_blame(Repository *self, PyObject *args, PyObject *kwds)
+PyObject *
+Repository_blame(Repository *self, PyObject *args, PyObject *kwds)
 {
     git_blame_options opts = GIT_BLAME_OPTIONS_INIT;
     git_blame *blame;
@@ -1478,13 +1523,14 @@ PyObject* Repository_blame(Repository *self, PyObject *args, PyObject *kwds)
     PyObject *value1 = NULL;
     PyObject *value2 = NULL;
     int err;
-    char *keywords[] = {"flags", "min_match_characters", "newest_commit",
+    char *keywords[] = {"path", "flags", "min_match_characters", "newest_commit",
                         "oldest_commit", "min_line", "max_line", NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|IHOOII", keywords,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|IHO!O!II", keywords,
                                      &path, &opts.flags,
                                      &opts.min_match_characters,
-                                     &value1, &value2,
+                                     &OidType, &value1,
+                                     &OidType, &value2,
                                      &opts.min_line, &opts.max_line))
         return NULL;
 
@@ -1499,13 +1545,49 @@ PyObject* Repository_blame(Repository *self, PyObject *args, PyObject *kwds)
             return NULL;
     }
 
-    err = git_blame_file(&blame, self->repo, path, NULL);
+    err = git_blame_file(&blame, self->repo, path, &opts);
     if (err < 0)
         return Error_set(err);
 
     return wrap_blame(blame, self);
 }
 
+PyDoc_STRVAR(Repository_reset__doc__,
+    "reset(oid, reset_type)\n"
+    "\n"
+    "Resets current head to the provided oid.\n"
+    "reset_type:\n"
+    "GIT_RESET_SOFT: resets head to point to oid, but does not modfy working copy, and leaves the changes in the index.\n"
+    "GIT_RESET_MIXED: resets head to point to oid, but does not modfy working copy. It empties the index too.\n"
+    "GIT_RESET_HARD: resets head to point to oid, and resets too the working copy and the content of the index.\n");
+
+PyObject *
+Repository_reset(Repository *self, PyObject* args)
+{
+    PyObject *py_oid;
+    git_oid oid;
+    git_object *target = NULL;
+    int err, reset_type;
+    size_t len;
+
+    if (!PyArg_ParseTuple(args, "Oi",
+                          &py_oid,
+                          &reset_type
+                          ))
+        return NULL;
+
+    len = py_oid_to_git_oid(py_oid, &oid);
+    if (len == 0)
+        return NULL;
+
+    err = git_object_lookup_prefix(&target, self->repo, &oid, len,
+                                   GIT_OBJ_ANY);
+    err = err < 0 ? err : git_reset(self->repo, target, reset_type);
+    git_object_free(target);
+    if (err < 0)
+        return Error_set_oid(err, &oid, len);
+    Py_RETURN_NONE;
+}
 
 PyMethodDef Repository_methods[] = {
     METHOD(Repository, create_blob, METH_VARARGS),
@@ -1516,6 +1598,7 @@ PyMethodDef Repository_methods[] = {
     METHOD(Repository, TreeBuilder, METH_VARARGS),
     METHOD(Repository, walk, METH_VARARGS),
     METHOD(Repository, merge_base, METH_VARARGS),
+    METHOD(Repository, merge, METH_O),
     METHOD(Repository, read, METH_O),
     METHOD(Repository, write, METH_VARARGS),
     METHOD(Repository, create_reference_direct, METH_VARARGS),
@@ -1537,6 +1620,7 @@ PyMethodDef Repository_methods[] = {
     METHOD(Repository, listall_branches, METH_VARARGS),
     METHOD(Repository, create_branch, METH_VARARGS),
     METHOD(Repository, blame, METH_VARARGS | METH_KEYWORDS),
+    METHOD(Repository, reset, METH_VARARGS),
     {NULL}
 };
 

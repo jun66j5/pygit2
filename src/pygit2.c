@@ -67,6 +67,7 @@ extern PyTypeObject NoteIterType;
 extern PyTypeObject BlameType;
 extern PyTypeObject BlameIterType;
 extern PyTypeObject BlameHunkType;
+extern PyTypeObject MergeResultType;
 
 
 
@@ -299,10 +300,18 @@ moduleinit(PyObject* m)
      * Log
      */
     INIT_TYPE(WalkerType, NULL, PyType_GenericNew)
+    ADD_TYPE(m, Walker);
     ADD_CONSTANT_INT(m, GIT_SORT_NONE)
     ADD_CONSTANT_INT(m, GIT_SORT_TOPOLOGICAL)
     ADD_CONSTANT_INT(m, GIT_SORT_TIME)
     ADD_CONSTANT_INT(m, GIT_SORT_REVERSE)
+
+    /*
+     * Reset
+     */
+    ADD_CONSTANT_INT(m, GIT_RESET_SOFT)
+    ADD_CONSTANT_INT(m, GIT_RESET_MIXED)
+    ADD_CONSTANT_INT(m, GIT_RESET_HARD)
 
     /*
      * References
@@ -376,6 +385,7 @@ moduleinit(PyObject* m)
     ADD_CONSTANT_INT(m, GIT_DIFF_IGNORE_WHITESPACE_EOL)
     ADD_CONSTANT_INT(m, GIT_DIFF_IGNORE_SUBMODULES)
     ADD_CONSTANT_INT(m, GIT_DIFF_PATIENCE)
+    ADD_CONSTANT_INT(m, GIT_DIFF_MINIMAL)
     ADD_CONSTANT_INT(m, GIT_DIFF_INCLUDE_IGNORED)
     ADD_CONSTANT_INT(m, GIT_DIFF_INCLUDE_UNTRACKED)
     ADD_CONSTANT_INT(m, GIT_DIFF_INCLUDE_UNMODIFIED)
@@ -419,6 +429,10 @@ moduleinit(PyObject* m)
     ADD_CONSTANT_INT(m, GIT_BLAME_TRACK_COPIES_SAME_COMMIT_MOVES)
     ADD_CONSTANT_INT(m, GIT_BLAME_TRACK_COPIES_SAME_COMMIT_COPIES)
     ADD_CONSTANT_INT(m, GIT_BLAME_TRACK_COPIES_ANY_COMMIT_COPIES)
+
+    /* Merge */
+    INIT_TYPE(MergeResultType, NULL, NULL)
+    ADD_TYPE(m, MergeResult)
 
     /* Global initialization of libgit2 */
     git_threads_init();
